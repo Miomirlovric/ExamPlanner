@@ -1,3 +1,15 @@
 <Solution>
-  <Project Path="ExamPlanner/ExamPlanner.csproj" />
+  <Folder Name="/Application/">
+    <Project Path="Application/Application.csproj" />
+    <Project Path="Domain/Domain.csproj" />
+  </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="MigrationHost/MigrationHost.csproj" />
+    <Project Path="Persistence/Persistence.csproj" />
+  </Folder>
+  <Folder Name="/Presentation/">
+    <Project Path="ExamPlanner/ExamPlanner.csproj">
+      <Deploy Solution="Debug|*" />
+    </Project>
+  </Folder>
 </Solution>
