@@ -8,9 +8,9 @@ namespace Domain.Entities
     {
         public int Id { get; set; }
         public bool IsDirected { get; set; } = false;
-        public Guid FileId {  get; set; }
-        public FileEntity File {  get; set; }
+        public Guid FileId { get; set; }
+        public FileEntity File { get; set; }
 
-        public IEnumerable<GraphRelation> GraphRelations { get; set; }
+        public ICollection<GraphRelation> GraphRelations { get; set; } = [];
     }
 }

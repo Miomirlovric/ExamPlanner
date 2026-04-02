@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<base:ContentPageBase
+    x:Class="ExamPlanner.Pages.ExamEditorPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:base="clr-namespace:ExamPlanner.Base"
+    xmlns:views="clr-namespace:ExamPlanner.Views"
+    xmlns:vm="clr-namespace:ExamPlanner.ViewModels"
+    Title="Exam"
+    x:DataType="vm:ExamEditorViewModel">
+
+    <Grid
+        Padding="16"
+        RowDefinitions="Auto,*,Auto"
+        RowSpacing="16">
+
+        <!--  Title + Save  -->
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <VerticalStackLayout Spacing="8">
+                <Label FontAttributes="Bold" Text="Exam Title" />
+                <Entry Placeholder="Enter exam title..." Text="{Binding Title}" />
+                <Button Command="{Binding SaveExamCommand}" Text="Save Exam" />
+            </VerticalStackLayout>
+            <VerticalStackLayout
+                Grid.Column="1"
+                IsVisible="{Binding IsSaved}"
+                Spacing="8"
+                VerticalOptions="Start">
+                <Button
+                    BackgroundColor="{StaticResource Gray200}"
+                    Command="{Binding ExportWordCommand}"
+                    Text="Export DOCX"
+                    TextColor="Black" />
+                <Button
+                    BackgroundColor="{StaticResource Gray200}"
+                    Command="{Binding ExportMoodleXmlCommand}"
+                    Text="Export XML"
+                    TextColor="Black" />
+                <Button
+                    BackgroundColor="{StaticResource Primary}"
+                    Command="{Binding ShowGeneratePopupCommand}"
+                    Text="Generate Questions"
+                    TextColor="White" />
+                <Button
+                    BackgroundColor="{StaticResource Tertiary}"
+                    Command="{Binding ShowLibraryPopupCommand}"
+                    Text="Add From Library"
+                    TextColor="White" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <!--  Sections List  -->
+        <Grid
+            Grid.Row="1"
+            IsVisible="{Binding IsSaved}"
+            RowDefinitions="Auto,*"
+            RowSpacing="8">
+            <Label
+                FontAttributes="Bold"
+                FontSize="18"
+                Text="Sections" />
+
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Sections}">
+                <CollectionView.EmptyView>
+                    <Label Opacity="0.6" Text="No sections yet. Add one below." />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SectionDisplayItem">
+                        <Border
+                            Margin="0,4"
+                            Stroke="{StaticResource Gray200}"
+                            StrokeShape="RoundRectangle 8">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+
+                                <!--  Tappable edit area  -->
+                                <Grid
+                                    Padding="12"
+                                    ColumnDefinitions="Auto,*,Auto"
+                                    ColumnSpacing="10">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditSectionCommand}" CommandParameter="{Binding}" />
+                                    </Grid.GestureRecognizers>
+                                    <Image
+                                        Grid.Column="0"
+                                        Aspect="AspectFit"
+                                        HeightRequest="150"
+                                        IsVisible="{Binding HasImage}"
+                                        Source="{Binding ImagePath}"
+                                        WidthRequest="250" />
+                                    <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                        <Label FontAttributes="Bold" Text="{Binding Title}" />
+                                        <Label
+                                            FontSize="12"
+                                            Opacity="0.6"
+                                            Text="{Binding QuestionType}" />
+                                    </VerticalStackLayout>
+                                    <Label
+                                        Grid.Column="2"
+                                        FontSize="22"
+                                        Opacity="0.4"
+                                        Text="›"
+                                        VerticalOptions="Center" />
+                                </Grid>
+
+                                <!--  Export XML button  -->
+                                <Button
+                                    Grid.Column="1"
+                                    BackgroundColor="Transparent"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ExportSectionMoodleXmlCommand}"
+                                    CommandParameter="{Binding}"
+                                    FontSize="12"
+                                    Text="XML"
+                                    TextColor="{StaticResource Primary}"
+                                    VerticalOptions="Center"
+                                    WidthRequest="48" />
+
+                                <!--  Delete button  -->
+                                <Button
+                                    Grid.Column="2"
+                                    BackgroundColor="Transparent"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteSectionCommand}"
+                                    CommandParameter="{Binding}"
+                                    FontSize="16"
+                                    Text="✕"
+                                    TextColor="Red"
+                                    VerticalOptions="Center"
+                                    WidthRequest="48" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        <!--  Add Section Button  -->
+        <Button
+            Grid.Row="2"
+            Command="{Binding AddSectionCommand}"
+            IsVisible="{Binding IsSaved}"
+            Text="Add Section" />
+
+        <ActivityIndicator
+            Grid.RowSpan="3"
+            HorizontalOptions="Center"
+            IsRunning="{Binding IsBusy}"
+            IsVisible="{Binding IsBusy}"
+            VerticalOptions="Center" />
+
+        <!--  Generate Questions Popup Overlay  -->
+        <Grid
+            Grid.RowSpan="3"
+            Margin="-16"
+            BackgroundColor="#AA000000"
+            IsVisible="{Binding IsGeneratePopupVisible}">
+            <Border
+                Padding="24"
+                BackgroundColor="{AppThemeBinding Light=White,
+                                                  Dark=#1C1C1E}"
+                HorizontalOptions="Center"
+                Stroke="{StaticResource Gray200}"
+                StrokeShape="RoundRectangle 12"
+                VerticalOptions="Center"
+                WidthRequest="300">
+                <VerticalStackLayout Spacing="20">
+
+                    <Label
+                        FontAttributes="Bold"
+                        FontSize="18"
+                        HorizontalTextAlignment="Center"
+                        Text="Generate Questions" />
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label
+                            FontSize="13"
+                            Opacity="0.7"
+                            Text="Number of questions" />
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="12">
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="22"
+                                HorizontalTextAlignment="Center"
+                                MinimumWidthRequest="36"
+                                Text="{Binding GenerateCountValue, StringFormat='{0:F0}'}"
+                                VerticalOptions="Center" />
+                            <Stepper
+                                Increment="1"
+                                Maximum="20"
+                                Minimum="1"
+                                VerticalOptions="Center"
+                                Value="{Binding GenerateCountValue}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label
+                            FontSize="13"
+                            Opacity="0.7"
+                            Text="Vertices per graph" />
+                        <HorizontalStackLayout HorizontalOptions="Center" Spacing="12">
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="22"
+                                HorizontalTextAlignment="Center"
+                                MinimumWidthRequest="36"
+                                Text="{Binding GenerateVertexCountValue, StringFormat='{0:F0}'}"
+                                VerticalOptions="Center" />
+                            <Stepper
+                                Increment="1"
+                                Maximum="20"
+                                Minimum="2"
+                                VerticalOptions="Center"
+                                Value="{Binding GenerateVertexCountValue}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label
+                            FontSize="13"
+                            Opacity="0.7"
+                            Text="Question type" />
+                        <Picker ItemsSource="{Binding QuestionTypes}" SelectedItem="{Binding GenerateQuestionType}" />
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Label
+                            FontSize="13"
+                            Opacity="0.7"
+                            Text="Directed graph"
+                            VerticalOptions="Center" />
+                        <Switch
+                            IsEnabled="{Binding IsGenerateDirectedEnabled}"
+                            IsToggled="{Binding GenerateIsDirected}"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button
+                            BackgroundColor="{StaticResource Gray200}"
+                            Command="{Binding CancelGeneratePopupCommand}"
+                            Text="Cancel"
+                            TextColor="Black" />
+                        <Button
+                            Grid.Column="1"
+                            Command="{Binding GenerateQuestionsCommand}"
+                            Text="Generate" />
+                    </Grid>
+
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+		
+        <views:LibraryPickerView Grid.RowSpan="3" Margin="-16" />
+
+    </Grid>
+</base:ContentPageBase>

@@ -1,10 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+using Persistence;
 
-namespace MigrationHost
+namespace MigrationHost;
+
+public class DatabaseContextFactory : IDesignTimeDbContextFactory<ExamPlannerDbContext>
 {
-    public class DatabaseContextFactory
+    public ExamPlannerDbContext CreateDbContext(string[] args)
     {
+        var options = new DbContextOptionsBuilder<ExamPlannerDbContext>()
+            .UseSqlite("Data Source=ExamPlanner.db")
+            .Options;
+
+        return new ExamPlannerDbContext(options);
     }
 }

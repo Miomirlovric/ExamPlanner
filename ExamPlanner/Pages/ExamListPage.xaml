@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<base:ContentPageBase
+    x:Class="ExamPlanner.Pages.ExamListPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:base="clr-namespace:ExamPlanner.Base"
+    xmlns:vm="clr-namespace:ExamPlanner.ViewModels"
+    Title="Exams"
+    x:DataType="vm:ExamListViewModel">
+
+    <Grid Padding="16" RowDefinitions="*,Auto">
+
+        <CollectionView ItemsSource="{Binding Exams}">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout
+                    HorizontalOptions="Center"
+                    Spacing="8"
+                    VerticalOptions="Center">
+                    <Label
+                        FontSize="18"
+                        HorizontalOptions="Center"
+                        Text="No exams yet." />
+                    <Label
+                        FontSize="14"
+                        HorizontalOptions="Center"
+                        Opacity="0.6"
+                        Text="Tap the button below to create one." />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ExamDisplayItem">
+                    <Border
+                        Margin="0,4"
+                        Padding="16"
+                        Stroke="{StaticResource Gray200}"
+                        StrokeShape="RoundRectangle 8">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditExamCommand}" CommandParameter="{Binding}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto">
+                            <Label
+                                FontAttributes="Bold"
+                                FontSize="18"
+                                Text="{Binding Title}" />
+                            <Label
+                                Grid.Row="1"
+                                FontSize="12"
+                                Opacity="0.6"
+                                Text="{Binding CreatedAt, StringFormat='{0:d}'}" />
+                            <Label
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                FontSize="14"
+                                Opacity="0.7"
+                                Text="{Binding SectionCount, StringFormat='{0} sections'}"
+                                VerticalOptions="Center" />
+                            <Button
+                                Grid.RowSpan="2"
+                                Grid.Column="2"
+                                Padding="8,0"
+                                BackgroundColor="Transparent"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteExamCommand}"
+                                CommandParameter="{Binding}"
+                                FontSize="16"
+                                Text="✕"
+                                TextColor="Red"
+                                VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button
+            Grid.Row="1"
+            Margin="0,8,0,0"
+            Command="{Binding CreateExamCommand}"
+            Text="Create Exam" />
+
+        <ActivityIndicator
+            Grid.RowSpan="2"
+            HorizontalOptions="Center"
+            IsRunning="{Binding IsBusy}"
+            IsVisible="{Binding IsBusy}"
+            VerticalOptions="Center" />
+    </Grid>
+</base:ContentPageBase>

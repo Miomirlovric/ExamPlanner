@@ -3,13 +3,12 @@
     x:Class="ExamPlanner.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:ExamPlanner"
-    FlyoutIsPresented="True"
+    xmlns:pages="clr-namespace:ExamPlanner.Pages"
     Title="ExamPlanner">
 
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Exams"
+        ContentTemplate="{DataTemplate pages:ExamListPage}"
+        Route="ExamListPage" />
 
 </Shell>

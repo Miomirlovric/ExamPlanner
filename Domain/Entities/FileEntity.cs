@@ -11,6 +11,5 @@ namespace Domain.Entities
         public string Path { get; set; }
 
         public GraphEntity? Graph { get; set; }
-        public Guid? GraphId { get; set; }
     }
 }

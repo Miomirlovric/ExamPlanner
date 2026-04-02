@@ -8,6 +8,6 @@ namespace Domain.Entities
     {
         public Guid Id { get; set; }
         public string Title { get; set; }
-        public IEnumerable<ExamSection> Sections { get; set; }
+        public ICollection<ExamSection> Sections { get; set; } = [];
     }
 }

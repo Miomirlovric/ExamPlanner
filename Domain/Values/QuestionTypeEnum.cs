@@ -7,6 +7,9 @@ namespace Domain.Values
     public enum QuestionTypeEnum
     {
         ANALIZA_CENTRALNOSTI,
-        ANALIZA_GRAFA
+        ANALIZA_GRAFA,
+        CVRSTO_POVEZANE_KOMPONENTE,
+        TOPOLOSKO_SORTIRANJE,
+        DIJKSTRA,
     }
 }

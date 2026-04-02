@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ExamPlanner.ViewModels"
+             x:Class="ExamPlanner.Views.LibraryPickerView"
+             x:DataType="vm:ExamEditorViewModel">
+    <Grid BackgroundColor="#AA000000" IsVisible="{Binding IsLibraryPopupVisible}">
+        <Border Padding="24" BackgroundColor="{AppThemeBinding Light=White, Dark=#1C1C1E}" HorizontalOptions="Center" Stroke="{StaticResource Gray200}" StrokeShape="RoundRectangle 12" VerticalOptions="Center" WidthRequest="380">
+            <VerticalStackLayout Spacing="16">
+                <Label FontAttributes="Bold" FontSize="18" HorizontalTextAlignment="Center" Text="Question Library" />
+                <CollectionView HeightRequest="350" ItemsSource="{Binding LibrarySections}">
+                    <CollectionView.EmptyView>
+                        <Label Padding="0,20" HorizontalTextAlignment="Center" Opacity="0.6" Text="No questions available from other exams." />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LibrarySectionItem">
+                            <Border Margin="0,3" Padding="10" Stroke="{StaticResource Gray200}" StrokeShape="RoundRectangle 6">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.ToggleLibraryItemCommand}" CommandParameter="{Binding}" />
+                                    </Grid.GestureRecognizers>
+                                    <Image Grid.Column="0" Aspect="AspectFit" HeightRequest="60" IsVisible="{Binding HasImage}" Source="{Binding ImagePath}" WidthRequest="90" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                        <Label FontAttributes="Bold" FontSize="13" Text="{Binding Title}" />
+                                        <Label FontSize="11" Opacity="0.6" Text="{Binding QuestionType}" />
+                                        <Label FontSize="11" Opacity="0.5" Text="{Binding ExamTitle}" />
+                                    </VerticalStackLayout>
+                                    <CheckBox Grid.Column="2" InputTransparent="True" IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <Button BackgroundColor="{StaticResource Gray200}" Command="{Binding CancelLibraryPopupCommand}" Text="Cancel" TextColor="Black" />
+                    <Button Grid.Column="1" Command="{Binding AddFromLibraryCommand}" Text="Add Selected" />
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentView>
