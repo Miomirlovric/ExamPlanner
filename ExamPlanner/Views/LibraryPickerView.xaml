@@ -21,6 +21,9 @@
                     FontSize="18"
                     HorizontalTextAlignment="Center"
                     Text="Question Library" />
+                <SearchBar
+                    Placeholder="Search library..."
+                    Text="{Binding LibrarySearchQuery}" />
                 <CollectionView HeightRequest="350" ItemsSource="{Binding LibraryQuestions}">
                     <CollectionView.EmptyView>
                         <Label

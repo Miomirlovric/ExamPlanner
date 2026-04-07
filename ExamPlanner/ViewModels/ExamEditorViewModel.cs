@@ -33,6 +33,14 @@ public partial class ExamEditorViewModel(
     private ObservableCollection<QuestionDisplayItem> _Questions = [];
 
     [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        _ = LoadQuestionsAsync();
+    }
+
+    [ObservableProperty]
     private bool _isGeneratePopupVisible;
 
     [ObservableProperty]
@@ -103,18 +111,25 @@ public partial class ExamEditorViewModel(
     private async Task LoadQuestionsAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var dbQuestions = await db.ExamQuestions
+        var query = db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Where(s => s.ExamEntityId == _examId)
-            .ToListAsync();
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            query = query.Where(s => s.Title.Contains(SearchQuery) || s.Question.Contains(SearchQuery));
+        }
+
+        var dbQuestions = await query.ToListAsync();
 
         Questions = new ObservableCollection<QuestionDisplayItem>(
             dbQuestions.Select(s => new QuestionDisplayItem
             {
                 Id = s.Id,
                 Title = s.Title,
-                QuestionType = s.QuestionTypeEnum.ToString(),
+                QuestionType = s.QuestionTypeEnum.ToNormalizedString(),
                 ImagePath = s.GraphEntity?.File?.Path
             }));
     }
@@ -339,6 +354,14 @@ public partial class ExamEditorViewModel(
     [ObservableProperty]
     private ObservableCollection<LibraryQuestionItem> _libraryQuestions = [];
 
+    [ObservableProperty]
+    private string _librarySearchQuery = string.Empty;
+
+    partial void OnLibrarySearchQueryChanged(string value)
+    {
+        _ = LoadLibraryQuestionsAsync();
+    }
+
     [RelayCommand]
     private async Task ShowLibraryPopupAsync()
     {
@@ -360,19 +383,27 @@ public partial class ExamEditorViewModel(
     private async Task LoadLibraryQuestionsAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var dbQuestions = await db.ExamQuestions
+
+        var query = db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Include(s => s.ExamEntity)
             .Where(s => s.ExamEntityId != _examId)
-            .ToListAsync();
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
+        {
+            query = query.Where(s => s.Title.Contains(LibrarySearchQuery) || s.Question.Contains(LibrarySearchQuery));
+        }
+
+        var dbQuestions = await query.ToListAsync();
 
         LibraryQuestions = new ObservableCollection<LibraryQuestionItem>(
             dbQuestions.Select(s => new LibraryQuestionItem
             {
                 Id = s.Id,
                 Title = s.Title,
-                QuestionType = s.QuestionTypeEnum.ToString(),
+                QuestionType = s.QuestionTypeEnum.ToNormalizedString(),
                 ExamTitle = s.ExamEntity?.Title ?? string.Empty,
                 ImagePath = s.GraphEntity?.File?.Path
             }));

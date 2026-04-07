@@ -18,6 +18,14 @@ public partial class ExamListViewModel(
     [ObservableProperty]
     private ObservableCollection<ExamDisplayItem> _exams = [];
 
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        _ = LoadExamsAsync();
+    }
+
     public override async Task Start()
     {
         await LoadExamsAsync();
@@ -26,8 +34,16 @@ public partial class ExamListViewModel(
     private async Task LoadExamsAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var exams = await db.Exams
+        var query = db.Exams
             .Include(e => e.Questions)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            query = query.Where(e => e.Title.Contains(SearchQuery));
+        }
+
+        var exams = await query
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync();
 

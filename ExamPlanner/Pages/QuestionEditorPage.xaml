@@ -22,7 +22,7 @@
 
                 <HorizontalStackLayout Spacing="12">
                     <Label Text="Question Type" VerticalOptions="Center" />
-                    <Picker ItemsSource="{Binding QuestionTypes}" SelectedItem="{Binding SelectedQuestionType}" />
+                    <Picker ItemsSource="{Binding QuestionTypes}" SelectedItem="{Binding SelectedQuestionType}" ItemDisplayBinding="{Binding Converter={StaticResource QuestionTypeConverter}}" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Spacing="12">
