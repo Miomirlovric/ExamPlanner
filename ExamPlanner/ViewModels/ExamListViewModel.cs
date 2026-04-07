@@ -27,7 +27,7 @@ public partial class ExamListViewModel(
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var exams = await db.Exams
-            .Include(e => e.Sections)
+            .Include(e => e.Questions)
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync();
 
@@ -37,7 +37,7 @@ public partial class ExamListViewModel(
                 Id = e.Id,
                 Title = e.Title,
                 CreatedAt = e.CreatedAt,
-                SectionCount = e.Sections.Count
+                QuestionCount = e.Questions.Count
             }));
     }
 
@@ -65,20 +65,20 @@ public partial class ExamListViewModel(
 
         await using var db = await dbFactory.CreateDbContextAsync();
         var exam = await db.Exams
-            .Include(e => e.Sections)
+            .Include(e => e.Questions)
                 .ThenInclude(s => s.GraphEntity)
                     .ThenInclude(g => g.File)
             .FirstOrDefaultAsync(e => e.Id == item.Id);
 
         if (exam is not null)
         {
-            foreach (var section in exam.Sections)
+            foreach (var Question in exam.Questions)
             {
-                if (section.GraphEntity?.File is not null)
-                    await storageManager.DeleteFileAsync(section.GraphEntity.File.Path);
+                if (Question.GraphEntity?.File is not null)
+                    await storageManager.DeleteFileAsync(Question.GraphEntity.File.Path);
 
-                if (section.GraphEntity is not null)
-                    db.Graphs.Remove(section.GraphEntity);
+                if (Question.GraphEntity is not null)
+                    db.Graphs.Remove(Question.GraphEntity);
             }
 
             db.Exams.Remove(exam);
@@ -93,5 +93,5 @@ public class ExamDisplayItem
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
-    public int SectionCount { get; set; }
+    public int QuestionCount { get; set; }
 }

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <base:ContentPageBase
-    x:Class="ExamPlanner.Pages.SectionEditorPage"
+    x:Class="ExamPlanner.Pages.QuestionEditorPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:base="clr-namespace:ExamPlanner.Base"
     xmlns:views="clr-namespace:ExamPlanner.Views"
     xmlns:vm="clr-namespace:ExamPlanner.ViewModels"
-    Title="Section"
-    x:DataType="vm:SectionEditorViewModel">
+    Title="Question"
+    x:DataType="vm:QuestionEditorViewModel">
 
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="16">
 
-            <!--  ===== INPUT SECTION =====  -->
+            <!--  ===== INPUT Question =====  -->
             <VerticalStackLayout IsVisible="{Binding IsInputVisible}" Spacing="12">
 
                 <Label
@@ -102,7 +102,7 @@
                 <Button Command="{Binding GenerateCommand}" Text="Generate" />
             </VerticalStackLayout>
 
-            <!--  ===== RESULTS SECTION =====  -->
+            <!--  ===== RESULTS Question =====  -->
             <VerticalStackLayout IsVisible="{Binding IsGenerated}" Spacing="16">
 
                 <Label FontSize="14" Text="{Binding QuestionText}" />
@@ -130,7 +130,7 @@
                     <Button
                         Grid.Column="1"
                         Command="{Binding SaveCommand}"
-                        Text="Save Section" />
+                        Text="Save Question" />
                 </Grid>
             </VerticalStackLayout>
 

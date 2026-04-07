@@ -1,11 +1,11 @@
-﻿using Domain.Values;
+using Domain.Values;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Domain.Entities
 {
-    public class ExamSection : EntityBase
+    public class ExamQuestion : EntityBase
     {
         public Guid Id { get; set; }
 

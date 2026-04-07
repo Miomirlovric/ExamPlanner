@@ -12,14 +12,14 @@ using Persistence;
 
 namespace ExamPlanner.ViewModels;
 
-public partial class SectionEditorViewModel(
+public partial class QuestionEditorViewModel(
     IDbContextFactory<ExamPlannerDbContext> dbFactory,
     IGraphAnalysisService graphService,
     IStorageManager storageManager,
     INavigationService navigation) : ViewModelBase, IQueryAttributable
 {
     private Guid _examId;
-    private Guid _sectionId;
+    private Guid _QuestionId;
     private CentralitiesResponse? _centralitiesResponse;
     private PropertiesResponse? _propertiesResponse;
     private byte[]? _imageBytes;
@@ -114,7 +114,7 @@ public partial class SectionEditorViewModel(
     [ObservableProperty]
     private string _maxDegreeValue = string.Empty;
 
-    private bool IsEditing => _sectionId != Guid.Empty;
+    private bool IsEditing => _QuestionId != Guid.Empty;
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
@@ -128,9 +128,9 @@ public partial class SectionEditorViewModel(
             };
         }
 
-        if (query.TryGetValue("SectionId", out var secVal))
+        if (query.TryGetValue("QuestionId", out var secVal))
         {
-            _sectionId = secVal switch
+            _QuestionId = secVal switch
             {
                 Guid g => g,
                 string s => Guid.Parse(s),
@@ -142,48 +142,48 @@ public partial class SectionEditorViewModel(
     public override async Task Initialize()
     {
         if (IsEditing)
-            await LoadExistingSectionAsync();
+            await LoadExistingQuestionAsync();
     }
 
-    private async Task LoadExistingSectionAsync()
+    private async Task LoadExistingQuestionAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var section = await db.ExamSections
+        var Question = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.GraphRelations)
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(s => s.Id == _sectionId);
+            .FirstOrDefaultAsync(s => s.Id == _QuestionId);
 
-        if (section is null) return;
+        if (Question is null) return;
 
-        SelectedQuestionType = section.QuestionTypeEnum;
-        IsDirected = section.GraphEntity.IsDirected;
+        SelectedQuestionType = Question.QuestionTypeEnum;
+        IsDirected = Question.GraphEntity.IsDirected;
 
         Edges.Clear();
-        foreach (var rel in section.GraphEntity.GraphRelations)
+        foreach (var rel in Question.GraphEntity.GraphRelations)
             Edges.Add(new EdgeItem(rel.A, rel.B));
 
         // Load stored image
-        if (section.GraphEntity.File is not null && File.Exists(section.GraphEntity.File.Path))
+        if (Question.GraphEntity.File is not null && File.Exists(Question.GraphEntity.File.Path))
         {
-            var bytes = await storageManager.LoadFileAsync(section.GraphEntity.File.Path);
+            var bytes = await storageManager.LoadFileAsync(Question.GraphEntity.File.Path);
             _imageBytes = bytes;
             GraphImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
         }
 
         // Load stored answer based on question type
-        if (!string.IsNullOrEmpty(section.AnswerObject))
+        if (!string.IsNullOrEmpty(Question.AnswerObject))
         {
-            if (section.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_CENTRALNOSTI)
+            if (Question.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_CENTRALNOSTI)
             {
-                _centralitiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<CentralitiesResponse>(section.AnswerObject);
+                _centralitiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<CentralitiesResponse>(Question.AnswerObject);
                 if (_centralitiesResponse is not null)
                     PopulateCentralityFields(_centralitiesResponse);
             }
-            else if (section.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_GRAFA)
+            else if (Question.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_GRAFA)
             {
-                _propertiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<PropertiesResponse>(section.AnswerObject);
+                _propertiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<PropertiesResponse>(Question.AnswerObject);
                 if (_propertiesResponse is not null)
                     PopulatePropertiesFields(_propertiesResponse);
             }
@@ -312,7 +312,7 @@ public partial class SectionEditorViewModel(
         _ => string.Empty
     };
 
-    private string GenerateSectionTitle() => QuestionTextProvider.GetSectionTitle(SelectedQuestionType);
+    private string GenerateQuestionTitle() => QuestionTextProvider.GetQuestionTitle(SelectedQuestionType);
 
     [RelayCommand]
     private async Task SaveAsync()
@@ -326,11 +326,11 @@ public partial class SectionEditorViewModel(
 
             if (IsEditing)
             {
-                await UpdateExistingSectionAsync(db);
+                await UpdateExistingQuestionAsync(db);
             }
             else
             {
-                await CreateNewSectionAsync(db);
+                await CreateNewQuestionAsync(db);
             }
 
             await db.SaveChangesAsync();
@@ -346,7 +346,7 @@ public partial class SectionEditorViewModel(
         }
     }
 
-    private async Task CreateNewSectionAsync(ExamPlannerDbContext db)
+    private async Task CreateNewQuestionAsync(ExamPlannerDbContext db)
     {
         var fileName = $"graph_{Guid.NewGuid()}.png";
         var imagePath = await storageManager.SaveFileAsync(_imageBytes!, fileName);
@@ -371,46 +371,46 @@ public partial class SectionEditorViewModel(
             }).ToList()
         };
 
-        var section = new ExamSection
+        var Question = new ExamQuestion
         {
             Id = Guid.NewGuid(),
             ExamEntityId = _examId,
             GraphEntity = graphEntity,
-            Title = GenerateSectionTitle(),
+            Title = GenerateQuestionTitle(),
             Question = QuestionText,
             QuestionTypeEnum = SelectedQuestionType,
             AnswerObject = SerializeAnswerObject()
         };
 
-        db.ExamSections.Add(section);
+        db.ExamQuestions.Add(Question);
     }
 
-    private async Task UpdateExistingSectionAsync(ExamPlannerDbContext db)
+    private async Task UpdateExistingQuestionAsync(ExamPlannerDbContext db)
     {
-        var section = await db.ExamSections
+        var Question = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(s => s.Id == _sectionId);
+            .FirstOrDefaultAsync(s => s.Id == _QuestionId);
 
-        if (section is null) return;
+        if (Question is null) return;
 
         // Update image file
-        var fileName = section.GraphEntity.File?.Name ?? $"graph_{Guid.NewGuid()}.png";
+        var fileName = Question.GraphEntity.File?.Name ?? $"graph_{Guid.NewGuid()}.png";
         var imagePath = await storageManager.SaveFileAsync(_imageBytes!, fileName);
 
-        if (section.GraphEntity.File is not null)
+        if (Question.GraphEntity.File is not null)
         {
-            section.GraphEntity.File.Path = imagePath;
+            Question.GraphEntity.File.Path = imagePath;
         }
         else
         {
             var fileEntity = new FileEntity { Id = Guid.NewGuid(), Name = fileName, Path = imagePath };
-            section.GraphEntity.FileId = fileEntity.Id;
-            section.GraphEntity.File = fileEntity;
+            Question.GraphEntity.FileId = fileEntity.Id;
+            Question.GraphEntity.File = fileEntity;
         }
 
         await db.GraphRelations
-            .Where(r => r.GraphEntityId == section.GraphEntity.Id)
+            .Where(r => r.GraphEntityId == Question.GraphEntity.Id)
             .ExecuteDeleteAsync();
 
         foreach (var edge in Edges)
@@ -420,14 +420,14 @@ public partial class SectionEditorViewModel(
                 Id = Guid.NewGuid(),
                 A = edge.Source,
                 B = edge.Target,
-                GraphEntityId = section.GraphEntity.Id
+                GraphEntityId = Question.GraphEntity.Id
             });
         }
 
-        section.GraphEntity.IsDirected = IsDirected;
-        section.QuestionTypeEnum = SelectedQuestionType;
-        section.Question = QuestionText;
-        section.AnswerObject = SerializeAnswerObject();
+        Question.GraphEntity.IsDirected = IsDirected;
+        Question.QuestionTypeEnum = SelectedQuestionType;
+        Question.Question = QuestionText;
+        Question.AnswerObject = SerializeAnswerObject();
     }
 }
 

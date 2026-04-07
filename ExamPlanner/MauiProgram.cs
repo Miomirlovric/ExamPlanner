@@ -1,4 +1,4 @@
-﻿using Application.Extensions;
+using Application.Extensions;
 using Application.Settings;
 using Application.Storage;
 using ExamPlanner.Pages;
@@ -38,12 +38,12 @@ namespace ExamPlanner
             // ViewModels
             builder.Services.AddTransient<ExamListViewModel>();
             builder.Services.AddTransient<ExamEditorViewModel>();
-            builder.Services.AddTransient<SectionEditorViewModel>();
+            builder.Services.AddTransient<QuestionEditorViewModel>();
 
             // Pages
             builder.Services.AddTransient<ExamListPage>();
             builder.Services.AddTransient<ExamEditorPage>();
-            builder.Services.AddTransient<SectionEditorPage>();
+            builder.Services.AddTransient<QuestionEditorPage>();
 
 #if DEBUG
             builder.Logging.AddDebug();

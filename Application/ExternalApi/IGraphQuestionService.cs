@@ -3,11 +3,11 @@ using Domain.Values;
 
 namespace Application.ExternalApi;
 
-public record GraphSectionData(GraphEntity Graph, byte[] ImageBytes, string AnswerJson);
+public record GraphQuestionData(GraphEntity Graph, byte[] ImageBytes, string AnswerJson);
 
-public interface IGraphSectionService
+public interface IGraphQuestionservice
 {
-    Task<GraphSectionData> BuildSectionDataAsync(
+    Task<GraphQuestionData> BuildQuestionDataAsync(
         int vertexCount,
         bool isDirected,
         QuestionTypeEnum questionType,

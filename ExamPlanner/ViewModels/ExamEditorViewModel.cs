@@ -18,7 +18,7 @@ public partial class ExamEditorViewModel(
     INavigationService navigation,
     IWordExportService wordExportService,
     IMoodleXmlExportService moodleXmlExportService,
-    IGraphSectionService graphSectionService,
+    IGraphQuestionservice graphQuestionservice,
     IStorageManager storageManager) : ViewModelBase, IQueryAttributable
 {
     private Guid _examId;
@@ -30,7 +30,7 @@ public partial class ExamEditorViewModel(
     private bool _isSaved;
 
     [ObservableProperty]
-    private ObservableCollection<SectionDisplayItem> _sections = [];
+    private ObservableCollection<QuestionDisplayItem> _Questions = [];
 
     [ObservableProperty]
     private bool _isGeneratePopupVisible;
@@ -89,7 +89,7 @@ public partial class ExamEditorViewModel(
     public override async Task Start()
     {
         if (IsSaved)
-            await LoadSectionsAsync();
+            await LoadQuestionsAsync();
     }
 
     private async Task LoadExamAsync()
@@ -100,17 +100,17 @@ public partial class ExamEditorViewModel(
             Title = exam.Title;
     }
 
-    private async Task LoadSectionsAsync()
+    private async Task LoadQuestionsAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var sections = await db.ExamSections
+        var dbQuestions = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Where(s => s.ExamEntityId == _examId)
             .ToListAsync();
 
-        Sections = new ObservableCollection<SectionDisplayItem>(
-            sections.Select(s => new SectionDisplayItem
+        Questions = new ObservableCollection<QuestionDisplayItem>(
+            dbQuestions.Select(s => new QuestionDisplayItem
             {
                 Id = s.Id,
                 Title = s.Title,
@@ -162,40 +162,40 @@ public partial class ExamEditorViewModel(
     }
 
     [RelayCommand]
-    private async Task AddSectionAsync()
+    private async Task AddQuestionAsync()
     {
-        await navigation.NavigateToAsync(nameof(SectionEditorPage),
+        await navigation.NavigateToAsync(nameof(QuestionEditorPage),
             new Dictionary<string, object> { { "ExamId", _examId } });
     }
 
     [RelayCommand]
-    private async Task EditSectionAsync(SectionDisplayItem? item)
+    private async Task EditQuestionAsync(QuestionDisplayItem? item)
     {
         if (item is null) return;
-        await navigation.NavigateToAsync(nameof(SectionEditorPage),
+        await navigation.NavigateToAsync(nameof(QuestionEditorPage),
             new Dictionary<string, object>
             {
                 { "ExamId", _examId },
-                { "SectionId", item.Id }
+                { "QuestionId", item.Id }
             });
     }
 
     [RelayCommand]
-    private async Task DeleteSectionAsync(SectionDisplayItem? item)
+    private async Task DeleteQuestionAsync(QuestionDisplayItem? item)
     {
         if (item is null) return;
 
-        var confirmed = await Shell.Current.DisplayAlertAsync("Delete", $"Delete section \"{item.Title}\"?", "Yes", "No");
+        var confirmed = await Shell.Current.DisplayAlertAsync("Delete", $"Delete Question \"{item.Title}\"?", "Yes", "No");
         if (!confirmed) return;
 
         await using var db = await dbFactory.CreateDbContextAsync();
-        var section = await db.ExamSections.FindAsync(item.Id);
-        if (section is not null)
+        var Question = await db.ExamQuestions.FindAsync(item.Id);
+        if (Question is not null)
         {
-            db.ExamSections.Remove(section);
+            db.ExamQuestions.Remove(Question);
             await db.SaveChangesAsync();
         }
-        Sections.Remove(item);
+        Questions.Remove(item);
     }
 
     [RelayCommand]
@@ -274,7 +274,7 @@ public partial class ExamEditorViewModel(
             for (int i = 0; i < count; i++)
             {
                 var isDirected = GenerateIsDirected;
-                var data = await graphSectionService.BuildSectionDataAsync(vertexCount, isDirected, questionType);
+                var data = await graphQuestionservice.BuildQuestionDataAsync(vertexCount, isDirected, questionType);
 
                 var fileName = $"graph_{Guid.NewGuid()}.png";
                 var imagePath = await storageManager.SaveFileAsync(data.ImageBytes, fileName);
@@ -283,12 +283,12 @@ public partial class ExamEditorViewModel(
                 data.Graph.FileId = fileEntity.Id;
                 data.Graph.File = fileEntity;
 
-                db.ExamSections.Add(new ExamSection
+                db.ExamQuestions.Add(new ExamQuestion
                 {
                     Id = Guid.NewGuid(),
                     ExamEntityId = _examId,
                     GraphEntity = data.Graph,
-                    Title = QuestionTextProvider.GetSectionTitle(questionType),
+                    Title = QuestionTextProvider.GetQuestionTitle(questionType),
                     Question = QuestionTextProvider.GetQuestionText(questionType, isDirected),
                     QuestionTypeEnum = questionType,
                     AnswerObject = data.AnswerJson
@@ -296,7 +296,7 @@ public partial class ExamEditorViewModel(
             }
 
             await db.SaveChangesAsync();
-            await LoadSectionsAsync();
+            await LoadQuestionsAsync();
         }
         catch (Exception ex)
         {
@@ -309,14 +309,14 @@ public partial class ExamEditorViewModel(
     }
 
     [RelayCommand]
-    private async Task ExportSectionMoodleXmlAsync(SectionDisplayItem? item)
+    private async Task ExportQuestionMoodleXmlAsync(QuestionDisplayItem? item)
     {
         if (item is null) return;
 
         IsBusy = true;
         try
         {
-            var filePath = await moodleXmlExportService.ExportSectionAsync(item.Id);
+            var filePath = await moodleXmlExportService.ExportQuestionAsync(item.Id);
             await Share.Default.RequestAsync(new ShareFileRequest
             {
                 Title = $"Export {item.Title}",
@@ -337,13 +337,13 @@ public partial class ExamEditorViewModel(
     private bool _isLibraryPopupVisible;
 
     [ObservableProperty]
-    private ObservableCollection<LibrarySectionItem> _librarySections = [];
+    private ObservableCollection<LibraryQuestionItem> _libraryQuestions = [];
 
     [RelayCommand]
     private async Task ShowLibraryPopupAsync()
     {
         if (_examId == Guid.Empty) return;
-        await LoadLibrarySectionsAsync();
+        await LoadLibraryQuestionsAsync();
         IsLibraryPopupVisible = true;
     }
 
@@ -351,24 +351,24 @@ public partial class ExamEditorViewModel(
     private void CancelLibraryPopup() => IsLibraryPopupVisible = false;
 
     [RelayCommand]
-    private void ToggleLibraryItem(LibrarySectionItem? item)
+    private void ToggleLibraryItem(LibraryQuestionItem? item)
     {
         if (item is not null)
             item.IsSelected = !item.IsSelected;
     }
 
-    private async Task LoadLibrarySectionsAsync()
+    private async Task LoadLibraryQuestionsAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var sections = await db.ExamSections
+        var dbQuestions = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Include(s => s.ExamEntity)
             .Where(s => s.ExamEntityId != _examId)
             .ToListAsync();
 
-        LibrarySections = new ObservableCollection<LibrarySectionItem>(
-            sections.Select(s => new LibrarySectionItem
+        LibraryQuestions = new ObservableCollection<LibraryQuestionItem>(
+            dbQuestions.Select(s => new LibraryQuestionItem
             {
                 Id = s.Id,
                 Title = s.Title,
@@ -381,7 +381,7 @@ public partial class ExamEditorViewModel(
     [RelayCommand]
     private async Task AddFromLibraryAsync()
     {
-        var selected = LibrarySections.Where(s => s.IsSelected).ToList();
+        var selected = LibraryQuestions.Where(s => s.IsSelected).ToList();
         if (selected.Count == 0)
         {
             await Shell.Current.DisplayAlertAsync("Selection", "Select at least one question.", "OK");
@@ -395,7 +395,7 @@ public partial class ExamEditorViewModel(
             await using var db = await dbFactory.CreateDbContextAsync();
             foreach (var item in selected)
             {
-                var source = await db.ExamSections
+                var source = await db.ExamQuestions
                     .Include(s => s.GraphEntity)
                         .ThenInclude(g => g.GraphRelations)
                     .Include(s => s.GraphEntity)
@@ -424,7 +424,7 @@ public partial class ExamEditorViewModel(
                     }).ToList()
                 };
 
-                db.ExamSections.Add(new ExamSection
+                db.ExamQuestions.Add(new ExamQuestion
                 {
                     Id = Guid.NewGuid(),
                     ExamEntityId = _examId,
@@ -437,7 +437,7 @@ public partial class ExamEditorViewModel(
             }
 
             await db.SaveChangesAsync();
-            await LoadSectionsAsync();
+            await LoadQuestionsAsync();
         }
         catch (Exception ex)
         {
@@ -450,7 +450,7 @@ public partial class ExamEditorViewModel(
     }
 }
 
-public class SectionDisplayItem
+public class QuestionDisplayItem
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -459,7 +459,7 @@ public class SectionDisplayItem
     public bool HasImage => !string.IsNullOrEmpty(ImagePath) && File.Exists(ImagePath);
 }
 
-public partial class LibrarySectionItem : ObservableObject
+public partial class LibraryQuestionItem : ObservableObject
 {
     public Guid Id { get; init; }
     public string Title { get; init; } = string.Empty;

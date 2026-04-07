@@ -1,4 +1,4 @@
-﻿using ExamPlanner.Pages;
+using ExamPlanner.Pages;
 
 namespace ExamPlanner
 {
@@ -8,7 +8,7 @@ namespace ExamPlanner
         {
             InitializeComponent();
             Routing.RegisterRoute(nameof(ExamEditorPage), typeof(ExamEditorPage));
-            Routing.RegisterRoute(nameof(SectionEditorPage), typeof(SectionEditorPage));
+            Routing.RegisterRoute(nameof(QuestionEditorPage), typeof(QuestionEditorPage));
         }
     }
 }

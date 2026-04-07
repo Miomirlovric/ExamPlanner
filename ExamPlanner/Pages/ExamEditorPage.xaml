@@ -49,7 +49,7 @@
             </VerticalStackLayout>
         </Grid>
 
-        <!--  Sections List  -->
+        <!--  Questions List  -->
         <Grid
             Grid.Row="1"
             IsVisible="{Binding IsSaved}"
@@ -58,14 +58,14 @@
             <Label
                 FontAttributes="Bold"
                 FontSize="18"
-                Text="Sections" />
+                Text="Questions" />
 
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Sections}">
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Questions}">
                 <CollectionView.EmptyView>
-                    <Label Opacity="0.6" Text="No sections yet. Add one below." />
+                    <Label Opacity="0.6" Text="No Questions yet. Add one below." />
                 </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SectionDisplayItem">
+                    <DataTemplate x:DataType="vm:QuestionDisplayItem">
                         <Border
                             Margin="0,4"
                             Stroke="{StaticResource Gray200}"
@@ -78,7 +78,7 @@
                                     ColumnDefinitions="Auto,*,Auto"
                                     ColumnSpacing="10">
                                     <Grid.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditSectionCommand}" CommandParameter="{Binding}" />
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditQuestionCommand}" CommandParameter="{Binding}" />
                                     </Grid.GestureRecognizers>
                                     <Image
                                         Grid.Column="0"
@@ -106,7 +106,7 @@
                                 <Button
                                     Grid.Column="1"
                                     BackgroundColor="Transparent"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ExportSectionMoodleXmlCommand}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ExportQuestionMoodleXmlCommand}"
                                     CommandParameter="{Binding}"
                                     FontSize="12"
                                     Text="XML"
@@ -118,7 +118,7 @@
                                 <Button
                                     Grid.Column="2"
                                     BackgroundColor="Transparent"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteSectionCommand}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteQuestionCommand}"
                                     CommandParameter="{Binding}"
                                     FontSize="16"
                                     Text="✕"
@@ -132,12 +132,12 @@
             </CollectionView>
         </Grid>
 
-        <!--  Add Section Button  -->
+        <!--  Add Question Button  -->
         <Button
             Grid.Row="2"
-            Command="{Binding AddSectionCommand}"
+            Command="{Binding AddQuestionCommand}"
             IsVisible="{Binding IsSaved}"
-            Text="Add Section" />
+            Text="Add Question" />
 
         <ActivityIndicator
             Grid.RowSpan="3"
@@ -248,7 +248,7 @@
                 </VerticalStackLayout>
             </Border>
         </Grid>
-		
+
         <views:LibraryPickerView Grid.RowSpan="3" Margin="-16" />
 
     </Grid>

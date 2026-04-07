@@ -14,7 +14,7 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
     public async Task<string> ExportExamAsync(Guid examId, string examTitle)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var sections = await db.ExamSections
+        var Questions = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Where(s => s.ExamEntityId == examId)
@@ -22,8 +22,8 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
             .ToListAsync();
 
         var quiz = new XElement("quiz");
-        foreach (var section in sections)
-            quiz.Add(BuildQuestionElement(section));
+        foreach (var Question in Questions)
+            quiz.Add(BuildQuestionElement(Question));
 
         var safeTitle = string.Concat(examTitle.Split(Path.GetInvalidFileNameChars()));
         var filePath = Path.Combine(FileSystem.CacheDirectory, $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.xml");
@@ -31,28 +31,28 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
         return filePath;
     }
 
-    public async Task<string> ExportSectionAsync(Guid sectionId)
+    public async Task<string> ExportQuestionAsync(Guid QuestionId)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
-        var section = await db.ExamSections
+        var Question = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(s => s.Id == sectionId);
+            .FirstOrDefaultAsync(s => s.Id == QuestionId);
 
-        if (section is null) throw new InvalidOperationException("Section not found.");
+        if (Question is null) throw new InvalidOperationException("Question not found.");
 
-        var quiz = new XElement("quiz", BuildQuestionElement(section));
-        var safeTitle = string.Concat(section.Title.Split(Path.GetInvalidFileNameChars()));
+        var quiz = new XElement("quiz", BuildQuestionElement(Question));
+        var safeTitle = string.Concat(Question.Title.Split(Path.GetInvalidFileNameChars()));
         var filePath = Path.Combine(FileSystem.CacheDirectory, $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.xml");
         SaveXml(quiz, filePath);
         return filePath;
     }
 
-    private static XElement BuildQuestionElement(ExamSection section)
+    private static XElement BuildQuestionElement(ExamQuestion Question)
     {
-        var imageName = $"graph_{section.Id}.png";
-        var imageBase64 = GetImageBase64(section.GraphEntity?.File?.Path);
-        var cdataContent = BuildCdataContent(section, imageName);
+        var imageName = $"graph_{Question.Id}.png";
+        var imageBase64 = GetImageBase64(Question.GraphEntity?.File?.Path);
+        var cdataContent = BuildCdataContent(Question, imageName);
 
         var questionTextEl = new XElement("questiontext",
             new XAttribute("format", "html"),
@@ -71,7 +71,7 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
 
         return new XElement("question",
             new XAttribute("type", "cloze"),
-            new XElement("name", new XElement("text", section.Title)),
+            new XElement("name", new XElement("text", Question.Title)),
             questionTextEl,
             feedbackEl,
             new XElement("penalty", "0.3333333"),
@@ -85,19 +85,19 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
         return Convert.ToBase64String(File.ReadAllBytes(path));
     }
 
-    private static string BuildCdataContent(ExamSection section, string imageName)
+    private static string BuildCdataContent(ExamQuestion Question, string imageName)
     {
         var sb = new StringBuilder();
-        sb.Append($"<p>{section.Question}</p>\n");
+        sb.Append($"<p>{Question.Question}</p>\n");
         sb.Append($"<p><img src=\"@@PLUGINFILE@@/{imageName}\"></p>\n");
 
-        switch (section.QuestionTypeEnum)
+        switch (Question.QuestionTypeEnum)
         {
             case QuestionTypeEnum.ANALIZA_GRAFA:
-                AppendGrafaAnswers(sb, section.AnswerObject);
+                AppendGrafaAnswers(sb, Question.AnswerObject);
                 break;
             case QuestionTypeEnum.ANALIZA_CENTRALNOSTI:
-                AppendCentralnostiAnswers(sb, section.AnswerObject);
+                AppendCentralnostiAnswers(sb, Question.AnswerObject);
                 break;
         }
 

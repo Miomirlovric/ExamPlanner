@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
             new ImageClient(apiBaseUrl, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(ImageClient))));
 
         services.AddTransient<IGraphAnalysisService, GraphAnalysisService>();
-        services.AddTransient<IGraphSectionService, GraphSectionService>();
+        services.AddTransient<IGraphQuestionservice, GraphQuestionservice>();
 
         return services;
     }

@@ -3,9 +3,9 @@ using ExamPlanner.ViewModels;
 
 namespace ExamPlanner.Pages;
 
-public partial class SectionEditorPage : ContentPageBase
+public partial class QuestionEditorPage : ContentPageBase
 {
-    public SectionEditorPage(SectionEditorViewModel viewModel)
+    public QuestionEditorPage(QuestionEditorViewModel viewModel)
     {
         InitializeViewModel(viewModel);
         InitializeComponent();

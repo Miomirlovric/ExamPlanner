@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -58,7 +58,7 @@ namespace Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ExamSections",
+                name: "ExamQuestions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
@@ -73,15 +73,15 @@ namespace Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ExamSections", x => x.Id);
+                    table.PrimaryKey("PK_ExamQuestions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ExamSections_Exams_ExamEntityId",
+                        name: "FK_ExamQuestions_Exams_ExamEntityId",
                         column: x => x.ExamEntityId,
                         principalTable: "Exams",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ExamSections_Graphs_GraphEntityId",
+                        name: "FK_ExamQuestions_Graphs_GraphEntityId",
                         column: x => x.GraphEntityId,
                         principalTable: "Graphs",
                         principalColumn: "Id",
@@ -109,13 +109,13 @@ namespace Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ExamSections_ExamEntityId",
-                table: "ExamSections",
+                name: "IX_ExamQuestions_ExamEntityId",
+                table: "ExamQuestions",
                 column: "ExamEntityId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ExamSections_GraphEntityId",
-                table: "ExamSections",
+                name: "IX_ExamQuestions_GraphEntityId",
+                table: "ExamQuestions",
                 column: "GraphEntityId");
 
             migrationBuilder.CreateIndex(
@@ -134,7 +134,7 @@ namespace Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ExamSections");
+                name: "ExamQuestions");
 
             migrationBuilder.DropTable(
                 name: "GraphRelations");

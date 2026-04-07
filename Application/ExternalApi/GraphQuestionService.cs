@@ -3,9 +3,9 @@ using Domain.Values;
 
 namespace Application.ExternalApi;
 
-public class GraphSectionService(IGraphAnalysisService graphAnalysisService) : IGraphSectionService
+public class GraphQuestionservice(IGraphAnalysisService graphAnalysisService) : IGraphQuestionservice
 {
-    public async Task<GraphSectionData> BuildSectionDataAsync(
+    public async Task<GraphQuestionData> BuildQuestionDataAsync(
         int vertexCount,
         bool isDirected,
         QuestionTypeEnum questionType,
@@ -37,6 +37,6 @@ public class GraphSectionService(IGraphAnalysisService graphAnalysisService) : I
             _ => throw new InvalidOperationException($"Unsupported question type: {questionType}")
         };
 
-        return new GraphSectionData(graph, imageBytes, answerJson);
+        return new GraphQuestionData(graph, imageBytes, answerJson);
     }
 }

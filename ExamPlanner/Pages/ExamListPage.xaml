@@ -52,7 +52,7 @@
                                 Grid.Column="1"
                                 FontSize="14"
                                 Opacity="0.7"
-                                Text="{Binding SectionCount, StringFormat='{0} sections'}"
+                                Text="{Binding QuestionCount, StringFormat='{0} Questions'}"
                                 VerticalOptions="Center" />
                             <Button
                                 Grid.RowSpan="2"

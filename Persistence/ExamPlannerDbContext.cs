@@ -6,7 +6,7 @@ namespace Persistence;
 public class ExamPlannerDbContext(DbContextOptions<ExamPlannerDbContext> options) : DbContext(options)
 {
     public DbSet<ExamEntity> Exams => Set<ExamEntity>();
-    public DbSet<ExamSection> ExamSections => Set<ExamSection>();
+    public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<GraphEntity> Graphs => Set<GraphEntity>();
     public DbSet<GraphRelation> GraphRelations => Set<GraphRelation>();
     public DbSet<FileEntity> Files => Set<FileEntity>();
@@ -18,13 +18,13 @@ public class ExamPlannerDbContext(DbContextOptions<ExamPlannerDbContext> options
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title).IsRequired();
 
-            entity.HasMany(e => e.Sections)
+            entity.HasMany(e => e.Questions)
                   .WithOne(s => s.ExamEntity)
                   .HasForeignKey(s => s.ExamEntityId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<ExamSection>(entity =>
+        modelBuilder.Entity<ExamQuestion>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Title).IsRequired();

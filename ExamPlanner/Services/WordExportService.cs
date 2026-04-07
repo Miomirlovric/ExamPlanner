@@ -17,7 +17,7 @@ public class WordExportService(IDbContextFactory<ExamPlannerDbContext> dbFactory
     {
         await using var db = await dbFactory.CreateDbContextAsync();
 
-        var sections = await db.ExamSections
+        var Questions = await db.ExamQuestions
             .Include(s => s.GraphEntity)
                 .ThenInclude(g => g.File)
             .Where(s => s.ExamEntityId == examId)
@@ -36,26 +36,26 @@ public class WordExportService(IDbContextFactory<ExamPlannerDbContext> dbFactory
         uint imageCounter = 1;
         bool isFirst = true;
 
-        foreach (var section in sections)
+        foreach (var Question in Questions)
         {
             if (!isFirst)
                 body.AppendChild(new Paragraph(new Run(new Break { Type = BreakValues.Page })));
             isFirst = false;
 
             // Question text
-            body.AppendChild(CreateTextParagraph(section.Question));
+            body.AppendChild(CreateTextParagraph(Question.Question));
             body.AppendChild(new Paragraph());
 
             // Graph image
-            if (section.GraphEntity?.File is not null && File.Exists(section.GraphEntity.File.Path))
+            if (Question.GraphEntity?.File is not null && File.Exists(Question.GraphEntity.File.Path))
             {
-                var imageBytes = await File.ReadAllBytesAsync(section.GraphEntity.File.Path);
+                var imageBytes = await File.ReadAllBytesAsync(Question.GraphEntity.File.Path);
                 body.AppendChild(CreateImageParagraph(mainPart, imageBytes, imageCounter++));
                 body.AppendChild(new Paragraph());
             }
 
             // Empty answer rows
-            foreach (var para in BuildAnswerRows(section.QuestionTypeEnum))
+            foreach (var para in BuildAnswerRows(Question.QuestionTypeEnum))
                 body.AppendChild(para);
         }
 

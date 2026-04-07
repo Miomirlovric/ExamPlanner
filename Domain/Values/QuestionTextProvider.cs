@@ -13,10 +13,10 @@ public static class QuestionTextProvider
         _ => string.Empty
     };
 
-    public static string GetSectionTitle(QuestionTypeEnum type) => type switch
+    public static string GetQuestionTitle(QuestionTypeEnum type) => type switch
     {
         QuestionTypeEnum.ANALIZA_CENTRALNOSTI => $"Centralnosti - {DateTime.Now:g}",
         QuestionTypeEnum.ANALIZA_GRAFA => $"Analiza grafa - {DateTime.Now:g}",
-        _ => $"Section - {DateTime.Now:g}"
+        _ => $"Question - {DateTime.Now:g}"
     };
 }
