@@ -22,7 +22,10 @@
 
                 <HorizontalStackLayout Spacing="12">
                     <Label Text="Question Type" VerticalOptions="Center" />
-                    <Picker ItemsSource="{Binding QuestionTypes}" SelectedItem="{Binding SelectedQuestionType}" ItemDisplayBinding="{Binding Converter={StaticResource QuestionTypeConverter}}" />
+                    <Picker
+                        ItemDisplayBinding="{Binding Converter={StaticResource QuestionTypeConverter}}"
+                        ItemsSource="{Binding QuestionTypes}"
+                        SelectedItem="{Binding SelectedQuestionType}" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Spacing="12">
@@ -118,8 +121,7 @@
                 </Border>
 
                 <!--  Results based on question type  -->
-                <views:CentralityResultsView IsVisible="{Binding IsCentralityQuestion}" />
-                <views:GraphPropertiesResultsView IsVisible="{Binding IsGraphPropertiesQuestion}" />
+                <views:AnswerResultsView />
 
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                     <Button

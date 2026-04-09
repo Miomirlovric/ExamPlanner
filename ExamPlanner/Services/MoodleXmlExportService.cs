@@ -1,9 +1,7 @@
-using Application.ExternalApi;
+using Application.Storage;
 using Domain.Entities;
-using Domain.Values;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
-using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 
@@ -85,57 +83,43 @@ public class MoodleXmlExportService(IDbContextFactory<ExamPlannerDbContext> dbFa
         return Convert.ToBase64String(File.ReadAllBytes(path));
     }
 
-    private static string BuildCdataContent(ExamQuestion Question, string imageName)
+    private static string BuildCdataContent(ExamQuestion question, string imageName)
     {
         var sb = new StringBuilder();
-        sb.Append($"<p>{Question.Question}</p>\n");
+        sb.Append($"<p>{question.Question}</p>\n");
         sb.Append($"<p><img src=\"@@PLUGINFILE@@/{imageName}\"></p>\n");
 
-        switch (Question.QuestionTypeEnum)
+        if (!string.IsNullOrEmpty(question.AnswerObject))
         {
-            case QuestionTypeEnum.ANALIZA_GRAFA:
-                AppendGrafaAnswers(sb, Question.AnswerObject);
-                break;
-            case QuestionTypeEnum.ANALIZA_CENTRALNOSTI:
-                AppendCentralnostiAnswers(sb, Question.AnswerObject);
-                break;
+            var answers = Newtonsoft.Json.JsonConvert.DeserializeObject<GenericQuestionAnswers>(question.AnswerObject);
+            if (answers is not null)
+                AppendAnswerLines(sb, answers);
         }
 
         return sb.ToString();
     }
 
-    private static void AppendGrafaAnswers(StringBuilder sb, string? answerJson)
+    private static void AppendAnswerLines(StringBuilder sb, GenericQuestionAnswers answers)
     {
-        if (string.IsNullOrEmpty(answerJson)) return;
-        var response = Newtonsoft.Json.JsonConvert.DeserializeObject<PropertiesResponse>(answerJson);
-        if (response is null) return;
-
-        var p = response.Properties;
-        var vertexAnswers = BuildVertexAnswers(p.Max_degree.Vertices);
-        var density = p.Density.ToString("F3", CultureInfo.InvariantCulture);
-
-        sb.Append($"<p>Dijametar grafa: {{1:SHORTANSWER_C:={p.Diameter}}}.</p>\n");
-        sb.Append($"<p>Gustoca grafa: {{1:SHORTANSWER_C:={density}}}.</p>\n");
-        sb.Append($"<p>Najveci stupanj ima vrh {{1:SHORTANSWER_C:{vertexAnswers}}} te iznosi: {{1:SHORTANSWER_C:={p.Max_degree.Value}}}.</p>\n");
-    }
-
-    private static void AppendCentralnostiAnswers(StringBuilder sb, string? answerJson)
-    {
-        if (string.IsNullOrEmpty(answerJson)) return;
-        var response = Newtonsoft.Json.JsonConvert.DeserializeObject<CentralitiesResponse>(answerJson);
-        if (response is null) return;
-
-        var c = response.Centralities;
-        var degreeVertices = BuildVertexAnswers(c.Degree.Vertices);
-        var betweennessVertices = BuildVertexAnswers(c.Betweenness.Vertices);
-        var closenessVertices = BuildVertexAnswers(c.Closeness.Vertices);
-        var degreeVal = c.Degree.Value.ToString("F3", CultureInfo.InvariantCulture);
-        var betweennessVal = c.Betweenness.Value.ToString("F3", CultureInfo.InvariantCulture);
-        var closenessVal = c.Closeness.Value.ToString("F3", CultureInfo.InvariantCulture);
-
-        sb.Append($"<p>Najvecu centralnost stupnja ima vrh {{1:SHORTANSWER_C:{degreeVertices}}} te iznosi: {{1:SHORTANSWER_C:={degreeVal}}}.</p>\n");
-        sb.Append($"<p>Najvecu centralnost medupoloženosti ima vrh {{1:SHORTANSWER_C:{betweennessVertices}}} te iznosi: {{1:SHORTANSWER_C:={betweennessVal}}}.</p>\n");
-        sb.Append($"<p>Najvecu centralnost bliskosti ima vrh {{1:SHORTANSWER_C:{closenessVertices}}} te iznosi: {{1:SHORTANSWER_C:={closenessVal}}}.</p>\n");
+        foreach (var line in answers.Lines)
+        {
+            sb.Append("<p>");
+            foreach (var seg in line.Segments)
+            {
+                if (seg.Type == SegmentType.Text)
+                {
+                    sb.Append(seg.Text);
+                }
+                else
+                {
+                    var moodleFormat = seg.CorrectAnswers.Length == 1
+                        ? $"={seg.CorrectAnswers[0]}"
+                        : string.Join("~", seg.CorrectAnswers.Select(a => $"%100%{a}"));
+                    sb.Append($"{{1:SHORTANSWER_C:{moodleFormat}}}");
+                }
+            }
+            sb.Append("</p>\n");
+        }
     }
 
     private static string BuildVertexAnswers(IEnumerable<string> vertices)

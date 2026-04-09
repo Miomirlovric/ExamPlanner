@@ -7,6 +7,8 @@ public class GraphAnalysisService(
     CentralitiesClient centralitiesClient,
     PropertiesClient propertiesClient,
     GenerateClient generateClient,
+    SortClient sortClient,
+    SccClient sccClient,
     IHttpClientFactory httpClientFactory,
     ExternalApiSettings apiSettings) : IGraphAnalysisService
 {
@@ -22,9 +24,21 @@ public class GraphAnalysisService(
         return propertiesClient.PostAsync(request, cancellationToken);
     }
 
-    public Task<GenerateGraphResponse> GenerateRandomGraphAsync(int vertexCount, bool directed, CancellationToken cancellationToken = default)
+    public Task<TopologicalSortResponse> GetTopologicalSortAsync(GraphEntity graph, CancellationToken cancellationToken = default)
     {
-        var request = new RandomGraphRequest { Vertex_count = vertexCount, Directed = directed };
+        var request = MapToGraphRequest(graph);
+        return sortClient.PostAsync(request, cancellationToken);
+    }
+
+    public Task<StronglyConnectedComponentsResponse> GetStronglyConnectedComponentsAsync(GraphEntity graph, CancellationToken cancellationToken = default)
+    {
+        var request = MapToGraphRequest(graph);
+        return sccClient.PostAsync(request, cancellationToken);
+    }
+
+    public Task<GenerateGraphResponse> GenerateRandomGraphAsync(int vertexCount, bool directed, RandomGraphRequestGraph_type graphType = RandomGraphRequestGraph_type.Default, CancellationToken cancellationToken = default)
+    {
+        var request = new RandomGraphRequest { Vertex_count = vertexCount, Directed = directed, Graph_type = graphType };
         return generateClient.PostAsync(request, cancellationToken);
     }
 

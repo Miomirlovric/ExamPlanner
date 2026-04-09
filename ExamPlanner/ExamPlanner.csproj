@@ -87,10 +87,7 @@
 	  <MauiXaml Update="Pages\SectionEditorPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\CentralityResultsView.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Views\GraphPropertiesResultsView.xaml">
+	  <MauiXaml Update="Views\AnswerResultsView.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\LibraryPickerView.xaml">

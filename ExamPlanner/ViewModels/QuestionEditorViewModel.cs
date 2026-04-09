@@ -9,6 +9,7 @@ using Domain.Entities;
 using Domain.Values;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
+using Newtonsoft.Json;
 
 namespace ExamPlanner.ViewModels;
 
@@ -20,8 +21,7 @@ public partial class QuestionEditorViewModel(
 {
     private Guid _examId;
     private Guid _QuestionId;
-    private CentralitiesResponse? _centralitiesResponse;
-    private PropertiesResponse? _propertiesResponse;
+    private GenericQuestionAnswers? _genericAnswers;
     private byte[]? _imageBytes;
 
     // Input properties
@@ -37,15 +37,12 @@ public partial class QuestionEditorViewModel(
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(QuestionText))]
-    [NotifyPropertyChangedFor(nameof(IsCentralityQuestion))]
-    [NotifyPropertyChangedFor(nameof(IsGraphPropertiesQuestion))]
     [NotifyPropertyChangedFor(nameof(IsDirectedEnabled))]
     private QuestionTypeEnum _selectedQuestionType = QuestionTypeEnum.ANALIZA_CENTRALNOSTI;
 
     public List<QuestionTypeEnum> QuestionTypes { get; } = Enum.GetValues<QuestionTypeEnum>().ToList();
 
-    public bool IsCentralityQuestion => SelectedQuestionType == QuestionTypeEnum.ANALIZA_CENTRALNOSTI;
-    public bool IsGraphPropertiesQuestion => SelectedQuestionType == QuestionTypeEnum.ANALIZA_GRAFA;
+    public ObservableCollection<AnswerLine> AnswerLines { get; } = [];
 
     public bool IsDirectedEnabled
         => QuestionTypeConstraints.GetForcedDirected(SelectedQuestionType) is null;
@@ -81,38 +78,6 @@ public partial class QuestionEditorViewModel(
     private ImageSource? _graphImageSource;
 
     public string QuestionText => QuestionTextProvider.GetQuestionText(SelectedQuestionType, IsDirected);
-
-    // Centrality results
-    [ObservableProperty]
-    private string _degreeVertices = string.Empty;
-
-    [ObservableProperty]
-    private string _degreeValue = string.Empty;
-
-    [ObservableProperty]
-    private string _betweennessVertices = string.Empty;
-
-    [ObservableProperty]
-    private string _betweennessValue = string.Empty;
-
-    [ObservableProperty]
-    private string _closenessVertices = string.Empty;
-
-    [ObservableProperty]
-    private string _closenessValue = string.Empty;
-
-    // Graph properties results
-    [ObservableProperty]
-    private string _diameterValue = string.Empty;
-
-    [ObservableProperty]
-    private string _densityValue = string.Empty;
-
-    [ObservableProperty]
-    private string _maxDegreeVertices = string.Empty;
-
-    [ObservableProperty]
-    private string _maxDegreeValue = string.Empty;
 
     private bool IsEditing => _QuestionId != Guid.Empty;
 
@@ -172,21 +137,11 @@ public partial class QuestionEditorViewModel(
             GraphImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
         }
 
-        // Load stored answer based on question type
         if (!string.IsNullOrEmpty(Question.AnswerObject))
         {
-            if (Question.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_CENTRALNOSTI)
-            {
-                _centralitiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<CentralitiesResponse>(Question.AnswerObject);
-                if (_centralitiesResponse is not null)
-                    PopulateCentralityFields(_centralitiesResponse);
-            }
-            else if (Question.QuestionTypeEnum == QuestionTypeEnum.ANALIZA_GRAFA)
-            {
-                _propertiesResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<PropertiesResponse>(Question.AnswerObject);
-                if (_propertiesResponse is not null)
-                    PopulatePropertiesFields(_propertiesResponse);
-            }
+            _genericAnswers = JsonConvert.DeserializeObject<GenericQuestionAnswers>(Question.AnswerObject);
+            if (_genericAnswers is not null)
+                PopulateAnswerLines(_genericAnswers);
         }
 
         IsGenerated = true;
@@ -233,7 +188,7 @@ public partial class QuestionEditorViewModel(
                     return;
                 }
 
-                var generated = await graphService.GenerateRandomGraphAsync(count, IsDirected);
+                var generated = await graphService.GenerateRandomGraphAsync(count, IsDirected, GetGraphType(SelectedQuestionType));
 
                 Edges.Clear();
                 foreach (var edge in generated.Edges)
@@ -260,18 +215,19 @@ public partial class QuestionEditorViewModel(
             _imageBytes = await graphService.GetGraphImageBytesAsync(graph);
             GraphImageSource = ImageSource.FromStream(() => new MemoryStream(_imageBytes));
 
-            if (SelectedQuestionType == QuestionTypeEnum.ANALIZA_CENTRALNOSTI)
+            _genericAnswers = SelectedQuestionType switch
             {
-                _centralitiesResponse = await graphService.GetCentralitiesAsync(graph);
-                _propertiesResponse = null;
-                PopulateCentralityFields(_centralitiesResponse);
-            }
-            else
-            {
-                _propertiesResponse = await graphService.GetPropertiesAsync(graph);
-                _centralitiesResponse = null;
-                PopulatePropertiesFields(_propertiesResponse);
-            }
+                QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
+                    QuestionAnswersMapper.FromCentralities(await graphService.GetCentralitiesAsync(graph)),
+                QuestionTypeEnum.ANALIZA_GRAFA =>
+                    QuestionAnswersMapper.FromProperties(await graphService.GetPropertiesAsync(graph)),
+                QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
+                    QuestionAnswersMapper.FromTopologicalSort(await graphService.GetTopologicalSortAsync(graph)),
+                QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
+                    QuestionAnswersMapper.FromScc(await graphService.GetStronglyConnectedComponentsAsync(graph)),
+                _ => throw new InvalidOperationException($"Unsupported question type: {SelectedQuestionType}")
+            };
+            PopulateAnswerLines(_genericAnswers);
 
             IsGenerated = true;
         }
@@ -285,39 +241,21 @@ public partial class QuestionEditorViewModel(
         }
     }
 
-    private void PopulateCentralityFields(CentralitiesResponse response)
+    private void PopulateAnswerLines(GenericQuestionAnswers answers)
     {
-        var c = response.Centralities;
-        DegreeVertices = string.Join(", ", c.Degree.Vertices);
-        DegreeValue = c.Degree.Value.ToString("F3");
-        BetweennessVertices = string.Join(", ", c.Betweenness.Vertices);
-        BetweennessValue = c.Betweenness.Value.ToString("F3");
-        ClosenessVertices = string.Join(", ", c.Closeness.Vertices);
-        ClosenessValue = c.Closeness.Value.ToString("F3");
+        AnswerLines.Clear();
+        foreach (var line in answers.Lines)
+            AnswerLines.Add(line);
     }
 
-    private void PopulatePropertiesFields(PropertiesResponse response)
-    {
-        var p = response.Properties;
-        DiameterValue = Newtonsoft.Json.JsonConvert.SerializeObject(p.Diameter).Trim('"');
-        DensityValue = p.Density.ToString("F3");
-        MaxDegreeVertices = string.Join(", ", p.Max_degree.Vertices);
-        MaxDegreeValue = p.Max_degree.Value.ToString();
-    }
-
-    private string SerializeAnswerObject() => SelectedQuestionType switch
-    {
-        QuestionTypeEnum.ANALIZA_CENTRALNOSTI => Newtonsoft.Json.JsonConvert.SerializeObject(_centralitiesResponse),
-        QuestionTypeEnum.ANALIZA_GRAFA => Newtonsoft.Json.JsonConvert.SerializeObject(_propertiesResponse),
-        _ => string.Empty
-    };
+    private string SerializeAnswerObject() => JsonConvert.SerializeObject(_genericAnswers);
 
     private string GenerateQuestionTitle() => QuestionTextProvider.GetQuestionTitle(SelectedQuestionType);
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if ((_centralitiesResponse is null && _propertiesResponse is null) || _imageBytes is null) return;
+        if (_genericAnswers is null || _imageBytes is null) return;
 
         IsBusy = true;
         try
@@ -429,6 +367,13 @@ public partial class QuestionEditorViewModel(
         Question.Question = QuestionText;
         Question.AnswerObject = SerializeAnswerObject();
     }
+
+    private static RandomGraphRequestGraph_type GetGraphType(QuestionTypeEnum type) => type switch
+    {
+        QuestionTypeEnum.TOPOLOSKO_SORTIRANJE => RandomGraphRequestGraph_type.Dag,
+        QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE => RandomGraphRequestGraph_type.Scc,
+        _ => RandomGraphRequestGraph_type.Default
+    };
 }
 
 public class EdgeItem(string source, string target)

@@ -11,7 +11,8 @@ public class GraphQuestionservice(IGraphAnalysisService graphAnalysisService) : 
         QuestionTypeEnum questionType,
         CancellationToken cancellationToken = default)
     {
-        var generated = await graphAnalysisService.GenerateRandomGraphAsync(vertexCount, isDirected, cancellationToken);
+        var graphType = GetGraphType(questionType);
+        var generated = await graphAnalysisService.GenerateRandomGraphAsync(vertexCount, isDirected, graphType, cancellationToken);
 
         var graph = new GraphEntity
         {
@@ -26,17 +27,31 @@ public class GraphQuestionservice(IGraphAnalysisService graphAnalysisService) : 
 
         var imageBytes = await graphAnalysisService.GetGraphImageBytesAsync(graph, cancellationToken);
 
-        var answerJson = questionType switch
+        var answers = questionType switch
         {
             QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
-                Newtonsoft.Json.JsonConvert.SerializeObject(
+                QuestionAnswersMapper.FromCentralities(
                     await graphAnalysisService.GetCentralitiesAsync(graph, cancellationToken)),
             QuestionTypeEnum.ANALIZA_GRAFA =>
-                Newtonsoft.Json.JsonConvert.SerializeObject(
+                QuestionAnswersMapper.FromProperties(
                     await graphAnalysisService.GetPropertiesAsync(graph, cancellationToken)),
+            QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
+                QuestionAnswersMapper.FromTopologicalSort(
+                    await graphAnalysisService.GetTopologicalSortAsync(graph, cancellationToken)),
+            QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
+                QuestionAnswersMapper.FromScc(
+                    await graphAnalysisService.GetStronglyConnectedComponentsAsync(graph, cancellationToken)),
             _ => throw new InvalidOperationException($"Unsupported question type: {questionType}")
         };
+        var answerJson = Newtonsoft.Json.JsonConvert.SerializeObject(answers);
 
         return new GraphQuestionData(graph, imageBytes, answerJson);
     }
+
+    private static RandomGraphRequestGraph_type GetGraphType(QuestionTypeEnum type) => type switch
+    {
+        QuestionTypeEnum.TOPOLOSKO_SORTIRANJE => RandomGraphRequestGraph_type.Dag,
+        QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE => RandomGraphRequestGraph_type.Scc,
+        _ => RandomGraphRequestGraph_type.Default
+    };
 }

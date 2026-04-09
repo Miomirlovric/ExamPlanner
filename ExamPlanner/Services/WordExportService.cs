@@ -1,7 +1,7 @@
+using Application.Storage;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using Domain.Values;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using A = DocumentFormat.OpenXml.Drawing;
@@ -55,7 +55,7 @@ public class WordExportService(IDbContextFactory<ExamPlannerDbContext> dbFactory
             }
 
             // Empty answer rows
-            foreach (var para in BuildAnswerRows(Question.QuestionTypeEnum))
+            foreach (var para in BuildAnswerRows(Question.AnswerObject))
                 body.AppendChild(para);
         }
 
@@ -131,23 +131,16 @@ public class WordExportService(IDbContextFactory<ExamPlannerDbContext> dbFactory
 
     // ── Answer rows ─────────────────────────────────────────────────────────
 
-    private static IEnumerable<Paragraph> BuildAnswerRows(QuestionTypeEnum questionType) =>
-        questionType switch
-        {
-            QuestionTypeEnum.ANALIZA_GRAFA =>
-            [
-                AnswerLine([Text("Dijametar grafa:"), Box(), Text(".")]),
-                AnswerLine([Text("Gustoća grafa:"), Box(), Text(".")]),
-                AnswerLine([Text("Najveći stupanj ima vrh"), Box(), Text("te iznosi:"), Box(), Text(".")])
-            ],
-            QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
-            [
-                AnswerLine([Text("Najveću centralnost stupnja ima vrh"), Box(), Text("te iznosi:"), Box(), Text(".")]),
-                AnswerLine([Text("Najveću centralnost međupoloženosti ima vrh"), Box(), Text("te iznosi:"), Box(), Text(".")]),
-                AnswerLine([Text("Najveću centralnost bliskosti ima vrh"), Box(), Text("te iznosi:"), Box(), Text(".")])
-            ],
-            _ => []
-        };
+    private static IEnumerable<Paragraph> BuildAnswerRows(string? answerJson)
+    {
+        if (string.IsNullOrEmpty(answerJson)) yield break;
+        var answers = Newtonsoft.Json.JsonConvert.DeserializeObject<GenericQuestionAnswers>(answerJson);
+        if (answers is null) yield break;
+
+        foreach (var line in answers.Lines)
+            yield return AnswerLine(line.Segments.Select(seg =>
+                seg.Type == SegmentType.Placeholder ? Box() : Text(seg.Text)));
+    }
 
     private static Paragraph AnswerLine(IEnumerable<Run> runs)
     {
