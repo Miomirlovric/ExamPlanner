@@ -304,7 +304,7 @@ public partial class ExamEditorViewModel(
                     ExamEntityId = _examId,
                     GraphEntity = data.Graph,
                     Title = QuestionTextProvider.GetQuestionTitle(questionType),
-                    Question = QuestionTextProvider.GetQuestionText(questionType, isDirected),
+                    Question = data.QuestionTextOverride ?? QuestionTextProvider.GetQuestionText(questionType, isDirected),
                     QuestionTypeEnum = questionType,
                     AnswerObject = data.AnswerJson
                 });

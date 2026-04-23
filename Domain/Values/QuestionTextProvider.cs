@@ -14,6 +14,8 @@ public static class QuestionTextProvider
             "Za graf sa slike treba napraviti topološko sortiranje i navesti jedan valjani niz topološki sortiranih vrhova.",
         QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
             "Za graf sa slike treba odrediti broj čvrsto povezanih komponenti i navesti najveću (s najviše uključenih vrhova) od njih.",
+        QuestionTypeEnum.DIJKSTRA =>
+            "Za neusmjereni graf sa slike odredite najkraće putove od početnog vrha do svih vrhova, njima odgovarajuće udaljenosti i put do najudaljenijeg vrha.",
         _ => string.Empty
     };
 
@@ -23,6 +25,7 @@ public static class QuestionTextProvider
         QuestionTypeEnum.ANALIZA_GRAFA => $"Analiza grafa - {DateTime.Now:g}",
         QuestionTypeEnum.TOPOLOSKO_SORTIRANJE => $"Topološko sortiranje - {DateTime.Now:g}",
         QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE => $"Čvrsto povezane komponente - {DateTime.Now:g}",
+        QuestionTypeEnum.DIJKSTRA => $"Dijkstrin algoritam - {DateTime.Now:g}",
         _ => $"Question - {DateTime.Now:g}"
     };
 }

@@ -32,6 +32,9 @@ public partial class QuestionEditorViewModel(
     private string _targetVertex = string.Empty;
 
     [ObservableProperty]
+    private string _weightInput = string.Empty;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(QuestionText))]
     private bool _isDirected;
 
@@ -76,8 +79,8 @@ public partial class QuestionEditorViewModel(
 
     [ObservableProperty]
     private ImageSource? _graphImageSource;
-
-    public string QuestionText => QuestionTextProvider.GetQuestionText(SelectedQuestionType, IsDirected);
+    [ObservableProperty]
+    private string _questionText = string.Empty;
 
     private bool IsEditing => _QuestionId != Guid.Empty;
 
@@ -122,12 +125,14 @@ public partial class QuestionEditorViewModel(
 
         if (Question is null) return;
 
+        QuestionText = Question.Question;
+
         SelectedQuestionType = Question.QuestionTypeEnum;
         IsDirected = Question.GraphEntity.IsDirected;
 
         Edges.Clear();
         foreach (var rel in Question.GraphEntity.GraphRelations)
-            Edges.Add(new EdgeItem(rel.A, rel.B));
+            Edges.Add(new EdgeItem(rel.A, rel.B, (int)(rel.Weight ?? 0)));
 
         // Load stored image
         if (Question.GraphEntity.File is not null && File.Exists(Question.GraphEntity.File.Path))
@@ -156,9 +161,12 @@ public partial class QuestionEditorViewModel(
         if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
             return;
 
-        Edges.Add(new EdgeItem(source, target));
+        int.TryParse(_weightInput?.Trim(), out var weight);
+        Edges.Add(new EdgeItem(source, target, weight));
         SourceVertex = string.Empty;
         TargetVertex = string.Empty;
+        _weightInput = string.Empty;
+        OnPropertyChanged("WeightInput");
     }
 
     [RelayCommand]
@@ -188,11 +196,12 @@ public partial class QuestionEditorViewModel(
                     return;
                 }
 
-                var generated = await graphService.GenerateRandomGraphAsync(count, IsDirected, GetGraphType(SelectedQuestionType));
+                var needsWeights = SelectedQuestionType == QuestionTypeEnum.DIJKSTRA;
+                var generated = await graphService.GenerateRandomGraphAsync(count, IsDirected, GetGraphType(SelectedQuestionType), needsWeights);
 
                 Edges.Clear();
                 foreach (var edge in generated.Edges)
-                    Edges.Add(new EdgeItem(edge.Source, edge.Target));
+                    Edges.Add(new EdgeItem(edge.Source, edge.Target, edge.Weight ?? 0));
             }
 
             if (Edges.Count == 0)
@@ -208,25 +217,37 @@ public partial class QuestionEditorViewModel(
                 {
                     Id = Guid.NewGuid(),
                     A = e.Source,
-                    B = e.Target
+                    B = e.Target,
+                    Weight = e.Weight > 0 ? e.Weight : 0
                 }).ToList()
             };
 
             _imageBytes = await graphService.GetGraphImageBytesAsync(graph);
             GraphImageSource = ImageSource.FromStream(() => new MemoryStream(_imageBytes));
 
-            _genericAnswers = SelectedQuestionType switch
+            if (SelectedQuestionType == QuestionTypeEnum.DIJKSTRA)
             {
-                QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
-                    QuestionAnswersMapper.FromCentralities(await graphService.GetCentralitiesAsync(graph)),
-                QuestionTypeEnum.ANALIZA_GRAFA =>
-                    QuestionAnswersMapper.FromProperties(await graphService.GetPropertiesAsync(graph)),
-                QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
-                    QuestionAnswersMapper.FromTopologicalSort(await graphService.GetTopologicalSortAsync(graph)),
-                QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
-                    QuestionAnswersMapper.FromScc(await graphService.GetStronglyConnectedComponentsAsync(graph)),
-                _ => throw new InvalidOperationException($"Unsupported question type: {SelectedQuestionType}")
-            };
+                var source = graph.GraphRelations.Select(r => r.A).First();
+                var shortestPaths = await graphService.GetShortestPathsAsync(graph, source);
+                _genericAnswers = QuestionAnswersMapper.FromShortestPaths(shortestPaths);
+                QuestionText = QuestionTextProvider.GetQuestionText(SelectedQuestionType, IsDirected)
+                    .Replace("početnog vrha", $"početnog vrha {source}");
+            }
+            else
+            {
+                _genericAnswers = SelectedQuestionType switch
+                {
+                    QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
+                        QuestionAnswersMapper.FromCentralities(await graphService.GetCentralitiesAsync(graph)),
+                    QuestionTypeEnum.ANALIZA_GRAFA =>
+                        QuestionAnswersMapper.FromProperties(await graphService.GetPropertiesAsync(graph)),
+                    QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
+                        QuestionAnswersMapper.FromTopologicalSort(await graphService.GetTopologicalSortAsync(graph)),
+                    QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
+                        QuestionAnswersMapper.FromScc(await graphService.GetStronglyConnectedComponentsAsync(graph)),
+                    _ => throw new InvalidOperationException($"Unsupported question type: {SelectedQuestionType}")
+                };
+            }
             PopulateAnswerLines(_genericAnswers);
 
             IsGenerated = true;
@@ -305,7 +326,8 @@ public partial class QuestionEditorViewModel(
             {
                 Id = Guid.NewGuid(),
                 A = e.Source,
-                B = e.Target
+                B = e.Target,
+                Weight = e.Weight > 0 ? e.Weight : 0
             }).ToList()
         };
 
@@ -358,6 +380,7 @@ public partial class QuestionEditorViewModel(
                 Id = Guid.NewGuid(),
                 A = edge.Source,
                 B = edge.Target,
+                Weight = edge.Weight > 0 ? edge.Weight : 0,
                 GraphEntityId = Question.GraphEntity.Id
             });
         }
@@ -376,9 +399,10 @@ public partial class QuestionEditorViewModel(
     };
 }
 
-public class EdgeItem(string source, string target)
+public class EdgeItem(string source, string target, double weight = 0)
 {
     public string Source { get; } = source;
     public string Target { get; } = target;
-    public string Display => $"{Source} — {Target}";
+    public double Weight { get; } = weight;
+    public string Display => $"{Source} — {Target}  (w: {Weight})";
 }

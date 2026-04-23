@@ -3,7 +3,7 @@ using Domain.Values;
 
 namespace Application.ExternalApi;
 
-public record GraphQuestionData(GraphEntity Graph, byte[] ImageBytes, string AnswerJson);
+public record GraphQuestionData(GraphEntity Graph, byte[] ImageBytes, string AnswerJson, string? QuestionTextOverride = null);
 
 public interface IGraphQuestionservice
 {

@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient(nameof(ImageClient));
         services.AddHttpClient(nameof(SortClient));
         services.AddHttpClient(nameof(SccClient));
+        services.AddHttpClient(nameof(PathsClient));
 
         services.AddSingleton(new ExternalApiSettings { BaseUrl = apiBaseUrl });
 
@@ -28,6 +29,8 @@ public static class ServiceCollectionExtensions
             new SortClient(apiBaseUrl, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(SortClient))));
         services.AddTransient(sp =>
             new SccClient(apiBaseUrl, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(SccClient))));
+        services.AddTransient(sp =>
+            new PathsClient(apiBaseUrl, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(PathsClient))));
 
         services.AddTransient<IGraphAnalysisService, GraphAnalysisService>();
         services.AddTransient<IGraphQuestionservice, GraphQuestionservice>();
