@@ -132,7 +132,7 @@ public partial class QuestionEditorViewModel(
 
         Edges.Clear();
         foreach (var rel in Question.GraphEntity.GraphRelations)
-            Edges.Add(new EdgeItem(rel.A, rel.B, (int)(rel.Weight ?? 0)));
+            Edges.Add(new EdgeItem(rel.A, rel.B, rel.Weight ?? 0));
 
         // Load stored image
         if (Question.GraphEntity.File is not null && File.Exists(Question.GraphEntity.File.Path))
