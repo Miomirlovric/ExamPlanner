@@ -55,7 +55,6 @@ namespace ExamPlanner
             var dbFactory = app.Services.GetRequiredService<IDbContextFactory<ExamPlannerDbContext>>();
             using (var db = dbFactory.CreateDbContext())
             {
-                db.Database.EnsureDeleted();
                 db.Database.Migrate();
             }
 
