@@ -1,17 +1,19 @@
 using System.Collections.ObjectModel;
+
+using Application.Repositories;
 using Application.Storage;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
 using ExamPlanner.Base;
 using ExamPlanner.Pages;
 using ExamPlanner.Services;
-using Microsoft.EntityFrameworkCore;
-using Persistence;
 
 namespace ExamPlanner.ViewModels;
 
 public partial class ExamListViewModel(
-    IDbContextFactory<ExamPlannerDbContext> dbFactory,
+    IExamRepository examRepository,
     INavigationService navigation,
     IStorageManager storageManager) : ViewModelBase
 {
@@ -33,19 +35,9 @@ public partial class ExamListViewModel(
 
     private async Task LoadExamsAsync()
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var query = db.Exams
-            .Include(e => e.Questions)
-            .AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            query = query.Where(e => e.Title.Contains(SearchQuery));
-        }
-
-        var exams = await query
-            .OrderByDescending(e => e.CreatedAt)
-            .ToListAsync();
+        var exams = await examRepository.FindAsync(
+            titleQuery: SearchQuery,
+            includeQuestions: true);
 
         Exams = new ObservableCollection<ExamDisplayItem>(
             exams.Select(e => new ExamDisplayItem
@@ -79,28 +71,18 @@ public partial class ExamListViewModel(
         var confirmed = await Shell.Current.DisplayAlert("Delete", $"Delete exam \"{item.Title}\"?", "Yes", "No");
         if (!confirmed) return;
 
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var exam = await db.Exams
-            .Include(e => e.Questions)
-                .ThenInclude(s => s.GraphEntity)
-                    .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(e => e.Id == item.Id);
+        var exam = await examRepository.GetByIdAsync(item.Id, includeQuestions: true, includeGraphFiles: true);
+        if (exam is null) return;
 
-        if (exam is not null)
+        // Delete graph files from disk before removing the exam record.
+        foreach (var question in exam.Questions)
         {
-            foreach (var Question in exam.Questions)
-            {
-                if (Question.GraphEntity?.File is not null)
-                    await storageManager.DeleteFileAsync(Question.GraphEntity.File.Path);
-
-                if (Question.GraphEntity is not null)
-                    db.Graphs.Remove(Question.GraphEntity);
-            }
-
-            db.Exams.Remove(exam);
-            await db.SaveChangesAsync();
-            Exams.Remove(item);
+            if (question.GraphEntity?.File is not null)
+                await storageManager.DeleteFileAsync(question.GraphEntity.File.Path);
         }
+
+        await examRepository.DeleteAsync(exam);
+        Exams.Remove(item);
     }
 }
 

@@ -1,23 +1,33 @@
 using System.Collections.ObjectModel;
+
+using Application.ExternalApi;
+using Application.ExternalApi.Adapters;
+using Application.Repositories;
+using Application.Storage;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ExamPlanner.Base;
-using ExamPlanner.Services;
-using Application.ExternalApi;
-using Application.Storage;
+
 using Domain.Entities;
 using Domain.Values;
-using Microsoft.EntityFrameworkCore;
-using Persistence;
+
+using ExamPlanner.Base;
+using ExamPlanner.Services;
+
 using Newtonsoft.Json;
 
 namespace ExamPlanner.ViewModels;
 
 public partial class QuestionEditorViewModel(
-    IDbContextFactory<ExamPlannerDbContext> dbFactory,
+    IQuestionRepository questionRepository,
     IGraphAnalysisService graphService,
     IStorageManager storageManager,
-    INavigationService navigation) : ViewModelBase, IQueryAttributable
+    INavigationService navigation,
+    IAnswerAdapter<CentralitiesResponse> centralitiesAdapter,
+    IAnswerAdapter<PropertiesResponse> propertiesAdapter,
+    IAnswerAdapter<TopologicalSortResponse> topologicalSortAdapter,
+    IAnswerAdapter<StronglyConnectedComponentsResponse> sccAdapter,
+    IAnswerAdapter<ShortestPathsResponse> shortestPathsAdapter) : ViewModelBase, IQueryAttributable
 {
     private Guid _examId;
     private Guid _QuestionId;
@@ -115,36 +125,33 @@ public partial class QuestionEditorViewModel(
 
     private async Task LoadExistingQuestionAsync()
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var Question = await db.ExamQuestions
-            .Include(s => s.GraphEntity)
-                .ThenInclude(g => g.GraphRelations)
-            .Include(s => s.GraphEntity)
-                .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(s => s.Id == _QuestionId);
+        var question = await questionRepository.GetByIdAsync(
+            _QuestionId,
+            includeGraphFile: true,
+            includeGraphRelations: true);
 
-        if (Question is null) return;
+        if (question is null) return;
 
-        QuestionText = Question.Question;
+        QuestionText = question.Question;
 
-        SelectedQuestionType = Question.QuestionTypeEnum;
-        IsDirected = Question.GraphEntity.IsDirected;
+        SelectedQuestionType = question.QuestionTypeEnum;
+        IsDirected = question.GraphEntity.IsDirected;
 
         Edges.Clear();
-        foreach (var rel in Question.GraphEntity.GraphRelations)
+        foreach (var rel in question.GraphEntity.GraphRelations)
             Edges.Add(new EdgeItem(rel.A, rel.B, rel.Weight ?? 0));
 
         // Load stored image
-        if (Question.GraphEntity.File is not null && File.Exists(Question.GraphEntity.File.Path))
+        if (question.GraphEntity.File is not null && File.Exists(question.GraphEntity.File.Path))
         {
-            var bytes = await storageManager.LoadFileAsync(Question.GraphEntity.File.Path);
+            var bytes = await storageManager.LoadFileAsync(question.GraphEntity.File.Path);
             _imageBytes = bytes;
             GraphImageSource = ImageSource.FromStream(() => new MemoryStream(bytes));
         }
 
-        if (!string.IsNullOrEmpty(Question.AnswerObject))
+        if (!string.IsNullOrEmpty(question.AnswerObject))
         {
-            _genericAnswers = JsonConvert.DeserializeObject<GenericQuestionAnswers>(Question.AnswerObject);
+            _genericAnswers = JsonConvert.DeserializeObject<GenericQuestionAnswers>(question.AnswerObject);
             if (_genericAnswers is not null)
                 PopulateAnswerLines(_genericAnswers);
         }
@@ -229,7 +236,7 @@ public partial class QuestionEditorViewModel(
             {
                 var source = graph.GraphRelations.Select(r => r.A).First();
                 var shortestPaths = await graphService.GetShortestPathsAsync(graph, source);
-                _genericAnswers = QuestionAnswersMapper.FromShortestPaths(shortestPaths);
+                _genericAnswers = shortestPathsAdapter.Adapt(shortestPaths);
                 QuestionText = QuestionTextProvider.GetQuestionText(SelectedQuestionType, IsDirected)
                     .Replace("početnog vrha", $"početnog vrha {source}");
             }
@@ -238,13 +245,13 @@ public partial class QuestionEditorViewModel(
                 _genericAnswers = SelectedQuestionType switch
                 {
                     QuestionTypeEnum.ANALIZA_CENTRALNOSTI =>
-                        QuestionAnswersMapper.FromCentralities(await graphService.GetCentralitiesAsync(graph)),
+                        centralitiesAdapter.Adapt(await graphService.GetCentralitiesAsync(graph)),
                     QuestionTypeEnum.ANALIZA_GRAFA =>
-                        QuestionAnswersMapper.FromProperties(await graphService.GetPropertiesAsync(graph)),
+                        propertiesAdapter.Adapt(await graphService.GetPropertiesAsync(graph)),
                     QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
-                        QuestionAnswersMapper.FromTopologicalSort(await graphService.GetTopologicalSortAsync(graph)),
+                        topologicalSortAdapter.Adapt(await graphService.GetTopologicalSortAsync(graph)),
                     QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>
-                        QuestionAnswersMapper.FromScc(await graphService.GetStronglyConnectedComponentsAsync(graph)),
+                        sccAdapter.Adapt(await graphService.GetStronglyConnectedComponentsAsync(graph)),
                     _ => throw new InvalidOperationException($"Unsupported question type: {SelectedQuestionType}")
                 };
             }
@@ -281,18 +288,11 @@ public partial class QuestionEditorViewModel(
         IsBusy = true;
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync();
-
             if (IsEditing)
-            {
-                await UpdateExistingQuestionAsync(db);
-            }
+                await UpdateExistingQuestionAsync();
             else
-            {
-                await CreateNewQuestionAsync(db);
-            }
+                await CreateNewQuestionAsync();
 
-            await db.SaveChangesAsync();
             await navigation.GoBackAsync();
         }
         catch (Exception ex)
@@ -305,7 +305,7 @@ public partial class QuestionEditorViewModel(
         }
     }
 
-    private async Task CreateNewQuestionAsync(ExamPlannerDbContext db)
+    private async Task CreateNewQuestionAsync()
     {
         var fileName = $"graph_{Guid.NewGuid()}.png";
         var imagePath = await storageManager.SaveFileAsync(_imageBytes!, fileName);
@@ -331,7 +331,7 @@ public partial class QuestionEditorViewModel(
             }).ToList()
         };
 
-        var Question = new ExamQuestion
+        var question = new ExamQuestion
         {
             Id = Guid.NewGuid(),
             ExamEntityId = _examId,
@@ -342,53 +342,49 @@ public partial class QuestionEditorViewModel(
             AnswerObject = SerializeAnswerObject()
         };
 
-        db.ExamQuestions.Add(Question);
+        await questionRepository.AddAsync(question);
     }
 
-    private async Task UpdateExistingQuestionAsync(ExamPlannerDbContext db)
+    private async Task UpdateExistingQuestionAsync()
     {
-        var Question = await db.ExamQuestions
-            .Include(s => s.GraphEntity)
-                .ThenInclude(g => g.File)
-            .FirstOrDefaultAsync(s => s.Id == _QuestionId);
+        var question = await questionRepository.GetByIdAsync(
+            _QuestionId,
+            includeGraphFile: true);
 
-        if (Question is null) return;
+        if (question is null) return;
 
         // Update image file
-        var fileName = Question.GraphEntity.File?.Name ?? $"graph_{Guid.NewGuid()}.png";
+        var fileName = question.GraphEntity.File?.Name ?? $"graph_{Guid.NewGuid()}.png";
         var imagePath = await storageManager.SaveFileAsync(_imageBytes!, fileName);
 
-        if (Question.GraphEntity.File is not null)
+        if (question.GraphEntity.File is not null)
         {
-            Question.GraphEntity.File.Path = imagePath;
+            question.GraphEntity.File.Path = imagePath;
         }
         else
         {
             var fileEntity = new FileEntity { Id = Guid.NewGuid(), Name = fileName, Path = imagePath };
-            Question.GraphEntity.FileId = fileEntity.Id;
-            Question.GraphEntity.File = fileEntity;
+            question.GraphEntity.FileId = fileEntity.Id;
+            question.GraphEntity.File = fileEntity;
         }
 
-        await db.GraphRelations
-            .Where(r => r.GraphEntityId == Question.GraphEntity.Id)
-            .ExecuteDeleteAsync();
-
-        foreach (var edge in Edges)
-        {
-            db.GraphRelations.Add(new GraphRelation
+        // Replace graph relations atomically (deletes old + inserts new in one DB call).
+        await questionRepository.ReplaceGraphRelationsAsync(
+            question.GraphEntity.Id,
+            Edges.Select(e => new GraphRelation
             {
                 Id = Guid.NewGuid(),
-                A = edge.Source,
-                B = edge.Target,
-                Weight = edge.Weight > 0 ? edge.Weight : 0,
-                GraphEntityId = Question.GraphEntity.Id
-            });
-        }
+                A = e.Source,
+                B = e.Target,
+                Weight = e.Weight > 0 ? e.Weight : 0
+            }));
 
-        Question.GraphEntity.IsDirected = IsDirected;
-        Question.QuestionTypeEnum = SelectedQuestionType;
-        Question.Question = QuestionText;
-        Question.AnswerObject = SerializeAnswerObject();
+        question.GraphEntity.IsDirected = IsDirected;
+        question.QuestionTypeEnum = SelectedQuestionType;
+        question.Question = QuestionText;
+        question.AnswerObject = SerializeAnswerObject();
+
+        await questionRepository.UpdateAsync(question);
     }
 
     private static RandomGraphRequestGraph_type GetGraphType(QuestionTypeEnum type) => type switch

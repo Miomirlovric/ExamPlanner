@@ -3,6 +3,7 @@ using Application.Settings;
 using Application.Storage;
 using ExamPlanner.Pages;
 using ExamPlanner.Services;
+using ExamPlanner.Services.Documents;
 using ExamPlanner.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ namespace ExamPlanner
             // Services
             builder.Services.AddSingleton<INavigationService, NavigationService>();
             builder.Services.AddSingleton<IStorageManager, StorageManager>();
+            builder.Services.AddTransient<IWordDocumentBuilder, WordDocumentBuilder>();
             builder.Services.AddTransient<IWordExportService, WordExportService>();
             builder.Services.AddTransient<IMoodleXmlExportService, MoodleXmlExportService>();
 

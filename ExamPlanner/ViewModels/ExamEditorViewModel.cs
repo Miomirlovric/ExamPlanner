@@ -1,20 +1,24 @@
 using System.Collections.ObjectModel;
+
+using Application.ExternalApi;
+using Application.Repositories;
+using Application.Storage;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+
+using Domain.Entities;
+using Domain.Values;
+
 using ExamPlanner.Base;
 using ExamPlanner.Pages;
 using ExamPlanner.Services;
-using Application.ExternalApi;
-using Application.Storage;
-using Domain.Entities;
-using Domain.Values;
-using Microsoft.EntityFrameworkCore;
-using Persistence;
 
 namespace ExamPlanner.ViewModels;
 
 public partial class ExamEditorViewModel(
-    IDbContextFactory<ExamPlannerDbContext> dbFactory,
+    IExamRepository examRepository,
+    IQuestionRepository questionRepository,
     INavigationService navigation,
     IWordExportService wordExportService,
     IMoodleXmlExportService moodleXmlExportService,
@@ -102,27 +106,17 @@ public partial class ExamEditorViewModel(
 
     private async Task LoadExamAsync()
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var exam = await db.Exams.FindAsync(_examId);
+        var exam = await examRepository.GetByIdAsync(_examId);
         if (exam is not null)
             Title = exam.Title;
     }
 
     private async Task LoadQuestionsAsync()
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var query = db.ExamQuestions
-            .Include(s => s.GraphEntity)
-                .ThenInclude(g => g.File)
-            .Where(s => s.ExamEntityId == _examId)
-            .AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            query = query.Where(s => s.Title.Contains(SearchQuery) || s.Question.Contains(SearchQuery));
-        }
-
-        var dbQuestions = await query.ToListAsync();
+        var dbQuestions = await questionRepository.FindInExamAsync(
+            _examId,
+            titleOrBodyQuery: SearchQuery,
+            includeGraphFile: true);
 
         Questions = new ObservableCollection<QuestionDisplayItem>(
             dbQuestions.Select(s => new QuestionDisplayItem
@@ -146,8 +140,6 @@ public partial class ExamEditorViewModel(
         IsBusy = true;
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync();
-
             if (_examId == Guid.Empty)
             {
                 var exam = new ExamEntity
@@ -155,19 +147,13 @@ public partial class ExamEditorViewModel(
                     Id = Guid.NewGuid(),
                     Title = Title
                 };
-                db.Exams.Add(exam);
-                await db.SaveChangesAsync();
+                await examRepository.AddAsync(exam);
                 _examId = exam.Id;
                 IsSaved = true;
             }
             else
             {
-                var exam = await db.Exams.FindAsync(_examId);
-                if (exam is not null)
-                {
-                    exam.Title = Title;
-                    await db.SaveChangesAsync();
-                }
+                await examRepository.UpdateTitleAsync(_examId, Title);
             }
         }
         finally
@@ -203,13 +189,7 @@ public partial class ExamEditorViewModel(
         var confirmed = await Shell.Current.DisplayAlertAsync("Delete", $"Delete Question \"{item.Title}\"?", "Yes", "No");
         if (!confirmed) return;
 
-        await using var db = await dbFactory.CreateDbContextAsync();
-        var Question = await db.ExamQuestions.FindAsync(item.Id);
-        if (Question is not null)
-        {
-            db.ExamQuestions.Remove(Question);
-            await db.SaveChangesAsync();
-        }
+        await questionRepository.DeleteAsync(item.Id);
         Questions.Remove(item);
     }
 
@@ -284,8 +264,6 @@ public partial class ExamEditorViewModel(
         IsBusy = true;
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync();
-
             for (int i = 0; i < count; i++)
             {
                 var isDirected = GenerateIsDirected;
@@ -298,7 +276,7 @@ public partial class ExamEditorViewModel(
                 data.Graph.FileId = fileEntity.Id;
                 data.Graph.File = fileEntity;
 
-                db.ExamQuestions.Add(new ExamQuestion
+                await questionRepository.AddAsync(new ExamQuestion
                 {
                     Id = Guid.NewGuid(),
                     ExamEntityId = _examId,
@@ -310,7 +288,6 @@ public partial class ExamEditorViewModel(
                 });
             }
 
-            await db.SaveChangesAsync();
             await LoadQuestionsAsync();
         }
         catch (Exception ex)
@@ -382,21 +359,11 @@ public partial class ExamEditorViewModel(
 
     private async Task LoadLibraryQuestionsAsync()
     {
-        await using var db = await dbFactory.CreateDbContextAsync();
-
-        var query = db.ExamQuestions
-            .Include(s => s.GraphEntity)
-                .ThenInclude(g => g.File)
-            .Include(s => s.ExamEntity)
-            .Where(s => s.ExamEntityId != _examId)
-            .AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(LibrarySearchQuery))
-        {
-            query = query.Where(s => s.Title.Contains(LibrarySearchQuery) || s.Question.Contains(LibrarySearchQuery));
-        }
-
-        var dbQuestions = await query.ToListAsync();
+        var dbQuestions = await questionRepository.FindNotInExamAsync(
+            _examId,
+            titleOrBodyQuery: LibrarySearchQuery,
+            includeGraphFile: true,
+            includeExam: true);
 
         LibraryQuestions = new ObservableCollection<LibraryQuestionItem>(
             dbQuestions.Select(s => new LibraryQuestionItem
@@ -423,15 +390,12 @@ public partial class ExamEditorViewModel(
         IsBusy = true;
         try
         {
-            await using var db = await dbFactory.CreateDbContextAsync();
             foreach (var item in selected)
             {
-                var source = await db.ExamQuestions
-                    .Include(s => s.GraphEntity)
-                        .ThenInclude(g => g.GraphRelations)
-                    .Include(s => s.GraphEntity)
-                        .ThenInclude(g => g.File)
-                    .FirstOrDefaultAsync(s => s.Id == item.Id);
+                var source = await questionRepository.GetByIdAsync(
+                    item.Id,
+                    includeGraphFile: true,
+                    includeGraphRelations: true);
 
                 if (source?.GraphEntity?.File is null) continue;
                 if (!File.Exists(source.GraphEntity.File.Path)) continue;
@@ -455,7 +419,7 @@ public partial class ExamEditorViewModel(
                     }).ToList()
                 };
 
-                db.ExamQuestions.Add(new ExamQuestion
+                await questionRepository.AddAsync(new ExamQuestion
                 {
                     Id = Guid.NewGuid(),
                     ExamEntityId = _examId,
@@ -467,7 +431,6 @@ public partial class ExamEditorViewModel(
                 });
             }
 
-            await db.SaveChangesAsync();
             await LoadQuestionsAsync();
         }
         catch (Exception ex)

@@ -1,4 +1,7 @@
 using Application.ExternalApi;
+using Application.ExternalApi.Adapters;
+using Application.ExternalApi.QuestionTypeStrategies;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application.Extensions;
@@ -33,6 +36,19 @@ public static class ServiceCollectionExtensions
             new PathsClient(apiBaseUrl, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(PathsClient))));
 
         services.AddTransient<IGraphAnalysisService, GraphAnalysisService>();
+
+        services.AddTransient<IAnswerAdapter<CentralitiesResponse>, CentralitiesAdapter>();
+        services.AddTransient<IAnswerAdapter<PropertiesResponse>, PropertiesAdapter>();
+        services.AddTransient<IAnswerAdapter<TopologicalSortResponse>, TopologicalSortAdapter>();
+        services.AddTransient<IAnswerAdapter<StronglyConnectedComponentsResponse>, SccAdapter>();
+        services.AddTransient<IAnswerAdapter<ShortestPathsResponse>, ShortestPathsAdapter>();
+
+        services.AddTransient<IQuestionTypeStrategy, CentralitiesQuestionStrategy>();
+        services.AddTransient<IQuestionTypeStrategy, PropertiesQuestionStrategy>();
+        services.AddTransient<IQuestionTypeStrategy, TopologicalSortQuestionStrategy>();
+        services.AddTransient<IQuestionTypeStrategy, SccQuestionStrategy>();
+        services.AddTransient<IQuestionTypeStrategy, DijkstraQuestionStrategy>();
+
         services.AddTransient<IGraphQuestionservice, GraphQuestionservice>();
 
         return services;
