@@ -2736,6 +2736,13 @@ namespace Application.ExternalApi
 
     }
 
+    /// <summary>
+    /// Topological orderings of a DAG.
+    /// <br/>
+    /// <br/>`order` is a single valid ordering (first one) kept for backward
+    /// <br/>compatibility with older clients. `orders` lists ALL valid orderings —
+    /// <br/>this is what new clients should consume.
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class TopologicalSortResponse
     {
@@ -2743,6 +2750,10 @@ namespace Application.ExternalApi
         [Newtonsoft.Json.JsonProperty("order", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<string> Order { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [Newtonsoft.Json.JsonProperty("orders", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<System.Collections.Generic.ICollection<string>> Orders { get; set; } = new System.Collections.ObjectModel.Collection<System.Collections.Generic.ICollection<string>>();
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 

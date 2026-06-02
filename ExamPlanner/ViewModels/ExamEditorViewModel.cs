@@ -64,6 +64,9 @@ public partial class ExamEditorViewModel(
     [ObservableProperty]
     private bool _generateIsDirected;
 
+    [ObservableProperty]
+    private string _generatePrefix = string.Empty;
+
     public bool IsGenerateDirectedEnabled
         => QuestionTypeConstraints.GetForcedDirected(GenerateQuestionType) is null;
 
@@ -248,6 +251,7 @@ public partial class ExamEditorViewModel(
         GenerateCountValue = 3;
         GenerateVertexCountValue = 5;
         GenerateQuestionType = QuestionTypeEnum.ANALIZA_CENTRALNOSTI;
+        GeneratePrefix = string.Empty;
         IsGeneratePopupVisible = true;
     }
 
@@ -260,6 +264,7 @@ public partial class ExamEditorViewModel(
         var count = Math.Max(1, (int)GenerateCountValue);
         var vertexCount = Math.Max(2, (int)GenerateVertexCountValue);
         var questionType = GenerateQuestionType;
+        var prefix = GeneratePrefix?.Trim() ?? string.Empty;
         IsGeneratePopupVisible = false;
         IsBusy = true;
         try
@@ -276,12 +281,17 @@ public partial class ExamEditorViewModel(
                 data.Graph.FileId = fileEntity.Id;
                 data.Graph.File = fileEntity;
 
+                var baseTitle = QuestionTextProvider.GetQuestionTitle(questionType);
+                var finalTitle = string.IsNullOrEmpty(prefix)
+                    ? baseTitle
+                    : $"{prefix} {i + 1} {baseTitle}";
+
                 await questionRepository.AddAsync(new ExamQuestion
                 {
                     Id = Guid.NewGuid(),
                     ExamEntityId = _examId,
                     GraphEntity = data.Graph,
-                    Title = QuestionTextProvider.GetQuestionTitle(questionType),
+                    Title = finalTitle,
                     Question = data.QuestionTextOverride ?? QuestionTextProvider.GetQuestionText(questionType, isDirected),
                     QuestionTypeEnum = questionType,
                     AnswerObject = data.AnswerJson

@@ -6,12 +6,21 @@ public sealed class TopologicalSortAdapter : IAnswerAdapter<TopologicalSortRespo
 {
     public GenericQuestionAnswers Adapt(TopologicalSortResponse response)
     {
-        var order = string.Join("", response.Order);
+        IEnumerable<IEnumerable<string>> allOrderings =
+            response.Orders is { Count: > 0 }
+                ? response.Orders
+                : [response.Order];
+
+        var correctAnswers = allOrderings
+            .Select(o => string.Join("", o))
+            .Distinct()
+            .ToArray();
+
         return new GenericQuestionAnswers
         {
             Lines =
             [
-                AdapterHelpers.Line("Niz topološki sortiranih vrhova je ", [order], "."),
+                AdapterHelpers.Line("Niz topološki sortiranih vrhova je ", correctAnswers, "."),
             ]
         };
     }

@@ -5,11 +5,11 @@ public static class QuestionTextProvider
     public static string GetQuestionText(QuestionTypeEnum type, bool isDirected) => type switch
     {
         QuestionTypeEnum.ANALIZA_CENTRALNOSTI => isDirected
-            ? "Za usmjereni graf sa slike odredite vrhove s najvecim iznosima mjera centralnosti (zaokruzeeno na tri decimale, ako ima vise takvih vrhova navedite samo jednog, ne vise od toga)."
-            : "Za neusmjereni graf sa slike odredite vrhove s najvecim iznosima mjera centralnosti (zaokruzeeno na tri decimale, ako ima vise takvih vrhova navedite samo jednog, ne vise od toga).",
+            ? "Za usmjereni graf sa slike odredite vrhove s največim iznosima mjera centralnosti (zaokruženo na tri decimale, ako ima više takvih vrhova navedite samo jednog, ne više od toga)."
+            : "Za neusmjereni graf sa slike odredite vrhove s največim iznosima mjera centralnosti (zaokruženo na tri decimale, ako ima vise takvih vrhova navedite samo jednog, ne vise od toga).",
         QuestionTypeEnum.ANALIZA_GRAFA => isDirected
-            ? "Za usmjereni graf sa slike odredite dijametar, gustocu (zaokruzeeno na tri decimale) i najveci stupanj izmedu svih vrhova (ako ima vise vrhova s najvecim stupnjem navedite samo jednog, ne vise od toga)."
-            : "Za neusmjereni graf sa slike odredite dijametar, gustocu (zaokruzeeno na tri decimale) i najveci stupanj izmedu svih vrhova (ako ima vise vrhova s najvecim stupnjem navedite samo jednog, ne vise od toga).",
+            ? "Za usmjereni graf sa slike odredite dijametar, gustoču (zaokruženo na tri decimale) i največi stupanj između svih vrhova (ako ima više vrhova s največim stupnjem navedite samo jednog, ne više od toga)."
+            : "Za neusmjereni graf sa slike odredite dijametar, gustoču (zaokruženo na tri decimale) i največi stupanj između svih vrhova (ako ima vise vrhova s največim stupnjem navedite samo jednog, ne vise od toga).",
         QuestionTypeEnum.TOPOLOSKO_SORTIRANJE =>
             "Za graf sa slike treba napraviti topološko sortiranje i navesti jedan valjani niz topološki sortiranih vrhova.",
         QuestionTypeEnum.CVRSTO_POVEZANE_KOMPONENTE =>

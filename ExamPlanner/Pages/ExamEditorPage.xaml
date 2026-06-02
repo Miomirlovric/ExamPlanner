@@ -241,6 +241,21 @@
                             VerticalOptions="Center" />
                     </HorizontalStackLayout>
 
+                    <VerticalStackLayout Spacing="6">
+                        <Label
+                            FontSize="13"
+                            Opacity="0.7"
+                            Text="Title prefix (optional)" />
+                        <Entry
+                            ClearButtonVisibility="WhileEditing"
+                            Placeholder="e.g. Test"
+                            Text="{Binding GeneratePrefix}" />
+                        <Label
+                            FontSize="11"
+                            Opacity="0.5"
+                            Text="Each title becomes &quot;Prefix N rest…&quot;" />
+                    </VerticalStackLayout>
+
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button
                             BackgroundColor="{StaticResource Gray200}"
