@@ -8,7 +8,7 @@ public interface IWordDocumentBuilder
     IWordDocumentBuilder AddPageBreak();
     IWordDocumentBuilder AddQuestionText(string text);
     IWordDocumentBuilder AddGraphImage(byte[] pngBytes);
-    IWordDocumentBuilder AddAnswerPlaceholders(GenericQuestionAnswers? answers);
+    IWordDocumentBuilder AddAnswerPlaceholders(GenericQuestionAnswers? answers, bool withSolutions = false);
     IWordDocumentBuilder AddBlankParagraph();
     Task SaveAsync(string filePath);
 }

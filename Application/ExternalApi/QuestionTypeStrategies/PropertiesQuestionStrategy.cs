@@ -9,7 +9,7 @@ public sealed class PropertiesQuestionStrategy(IAnswerAdapter<PropertiesResponse
 {
     public QuestionTypeEnum SupportedType => QuestionTypeEnum.ANALIZA_GRAFA;
     public bool NeedsWeights => false;
-    public RandomGraphRequestGraph_type GraphType => RandomGraphRequestGraph_type.Default;
+    public RandomGraphRequestGraph_type GraphType => RandomGraphRequestGraph_type.Properties;
 
     public async Task<QuestionAnswerData> BuildAnswersAsync(
         GraphEntity graph,

@@ -1,6 +1,8 @@
 using Application.Repositories;
 using Application.Storage;
 
+using Domain.Entities;
+
 using ExamPlanner.Services.Documents;
 
 using Newtonsoft.Json;
@@ -11,7 +13,7 @@ public class WordExportService(
     IQuestionRepository questionRepository,
     IWordDocumentBuilder docBuilder) : IWordExportService
 {
-    public async Task<string> ExportExamAsync(Guid examId, string examTitle)
+    public async Task<WordExportResult> ExportExamAsync(Guid examId, string examTitle)
     {
         var questions = (await questionRepository.FindInExamAsync(
                 examId,
@@ -20,8 +22,19 @@ public class WordExportService(
             .ToList();
 
         var safeTitle = string.Concat(examTitle.Split(Path.GetInvalidFileNameChars()));
-        var filePath = Path.Combine(FileSystem.CacheDirectory, $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.docx");
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
+        var blankPath = Path.Combine(FileSystem.CacheDirectory, $"{safeTitle}_{timestamp}.docx");
+        var solutionsPath = Path.Combine(FileSystem.CacheDirectory, $"{safeTitle}_{timestamp}_rjesenja.docx");
+
+        await BuildDocumentAsync(questions, blankPath, withSolutions: false);
+        await BuildDocumentAsync(questions, solutionsPath, withSolutions: true);
+
+        return new WordExportResult(blankPath, solutionsPath);
+    }
+
+    private async Task BuildDocumentAsync(IReadOnlyList<ExamQuestion> questions, string filePath, bool withSolutions)
+    {
         docBuilder.Begin();
         bool isFirst = true;
 
@@ -46,10 +59,9 @@ public class WordExportService(
             var answers = string.IsNullOrEmpty(question.AnswerObject)
                 ? null
                 : JsonConvert.DeserializeObject<GenericQuestionAnswers>(question.AnswerObject);
-            docBuilder.AddAnswerPlaceholders(answers);
+            docBuilder.AddAnswerPlaceholders(answers, withSolutions);
         }
 
         await docBuilder.SaveAsync(filePath);
-        return filePath;
     }
 }

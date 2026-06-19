@@ -2827,6 +2827,9 @@ namespace Application.ExternalApi
         [System.Runtime.Serialization.EnumMember(Value = @"scc")]
         Scc = 2,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"properties")]
+        Properties = 3,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]

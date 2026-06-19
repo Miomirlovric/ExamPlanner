@@ -53,14 +53,14 @@ public sealed class WordDocumentBuilder : IWordDocumentBuilder
         return this;
     }
 
-    public IWordDocumentBuilder AddAnswerPlaceholders(GenericQuestionAnswers? answers)
+    public IWordDocumentBuilder AddAnswerPlaceholders(GenericQuestionAnswers? answers, bool withSolutions = false)
     {
         if (answers is null) return this;
         _operations.Add((_, body) =>
         {
             foreach (var line in answers.Lines)
             {
-                body.AppendChild(BuildAnswerLine(line));
+                body.AppendChild(BuildAnswerLine(line, withSolutions));
             }
         });
         return this;
@@ -141,12 +141,16 @@ public sealed class WordDocumentBuilder : IWordDocumentBuilder
         return (w > 0 && h > 0) ? (w, h) : (800, 600);
     }
 
-    private static Paragraph BuildAnswerLine(AnswerLine line)
+    private static Paragraph BuildAnswerLine(AnswerLine line, bool withSolutions)
     {
         var para = new Paragraph(new ParagraphProperties(new SpacingBetweenLines { After = "200" }));
         foreach (var seg in line.Segments)
         {
-            var run = seg.Type == SegmentType.Placeholder ? Box() : Text(seg.Text);
+            Run run;
+            if (seg.Type == SegmentType.Placeholder)
+                run = withSolutions ? SolutionText(seg.DisplayValue) : Box();
+            else
+                run = Text(seg.Text);
             para.AppendChild(run);
         }
         return para;
@@ -154,6 +158,10 @@ public sealed class WordDocumentBuilder : IWordDocumentBuilder
 
     private static Run Text(string value) =>
         new(new Text($" {value} ") { Space = SpaceProcessingModeValues.Preserve });
+
+    private static Run SolutionText(string value) =>
+        new(new RunProperties(new Bold()),
+            new Text($" {value} ") { Space = SpaceProcessingModeValues.Preserve });
 
     private static Run Box() =>
         new(new RunProperties(

@@ -204,11 +204,11 @@ public partial class ExamEditorViewModel(
         IsBusy = true;
         try
         {
-            var filePath = await wordExportService.ExportExamAsync(_examId, Title);
-            await Share.Default.RequestAsync(new ShareFileRequest
+            var result = await wordExportService.ExportExamAsync(_examId, Title);
+            await Share.Default.RequestAsync(new ShareMultipleFilesRequest
             {
                 Title = $"Export {Title}",
-                File = new ShareFile(filePath)
+                Files = [new ShareFile(result.BlankPath), new ShareFile(result.SolutionsPath)]
             });
         }
         catch (Exception ex)
